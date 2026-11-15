@@ -30,6 +30,19 @@
   #hidebtn,#topbar button{width:auto;margin:0;padding:6px 14px;border-radius:999px;background:rgba(10,18,8,.55);color:#e8efdf;font-weight:500;font-size:12px;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
   #hidebtn:hover,#topbar button:hover{background:rgba(40,60,28,.7)}
   #topbar{position:fixed;left:16px;top:10px;display:flex;gap:8px;z-index:9}
+  #topbar button:disabled{opacity:.4;cursor:default}
+  #report{position:fixed;inset:0;z-index:70;background:#dfe2dd;display:flex;flex-direction:column;color:#e8efdf}
+  #report[hidden]{display:none}
+  .rp-bar{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#1c2a17;flex-wrap:wrap}
+  .rp-bar button{width:auto;margin:0;padding:6px 12px;min-height:0;border-radius:8px;background:rgba(255,255,255,.14);color:#e8efdf;font-weight:500}
+  .rp-bar button:hover{background:rgba(255,255,255,.26)}
+  #rptitle{min-width:130px;text-align:center;font-variant-numeric:tabular-nums}
+  #rptabs{display:flex;gap:4px;flex-wrap:wrap}
+  #rptabs button.on{background:#a8d65a;color:#12200a}
+  .rp-sp{flex:1}
+  .rp-stage{flex:1;min-height:0;padding:10px;display:flex}
+  #rpsvg{width:100%;height:100%;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.25)}
+  @media print{body>*:not(#report){display:none!important}#report{position:static;background:#fff;display:block!important}.rp-bar{display:none}.rp-stage{padding:0}#rpsvg{width:100%;height:auto;box-shadow:none}@page{size:landscape;margin:8mm}}
   #about{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(4,8,3,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   #about[hidden]{display:none}
   #about .ab-card{width:min(460px,100%);max-height:100%;overflow:auto;padding:22px 24px;border-radius:16px;background:rgba(14,24,10,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(0,0,0,.6)}
@@ -131,7 +144,11 @@
     <div class="sp-go">Touchez l'écran ou appuyez sur une touche pour commencer</div>
   </div>
 </div>
-<div id="topbar"><button id="aboutbtn" type="button">About</button><button id="drawbtn" type="button">Putting Stroke</button><button id="hidebtn" type="button">Hide Menu</button></div>
+<div id="topbar"><button id="aboutbtn" type="button">About</button><button id="drawbtn" type="button">Putting Stroke</button><button id="reportbtn" type="button" disabled title="Play a putt first">Report</button><button id="hidebtn" type="button">Hide Menu</button></div>
+<div id="report" hidden role="dialog" aria-label="Report">
+  <div class="rp-bar"><button id="rpprev" type="button" aria-label="Previous page">◀</button><span id="rptitle"></span><button id="rpnext" type="button" aria-label="Next page">▶</button><div id="rptabs"></div><span class="rp-sp"></span><button id="rpprint" type="button">Print</button><button id="rpclose" type="button">Close</button></div>
+  <div class="rp-stage"><svg id="rpsvg" viewBox="0 0 1456 816" preserveAspectRatio="xMidYMid meet"></svg></div>
+</div>
 <div id="about" hidden role="dialog" aria-modal="true" aria-label="À propos">
   <div class="ab-card">
     <h2>Precision Putting</h2>
@@ -486,6 +503,7 @@ function newTrial() {
 }
 function reset() {
   userPaused = false; updateLine();
+  S.rec = { t: [], x: [], y: [], z: [], yaw: [], v: [] }; S.shotDone = false; if (!S.fcIn) S.fcIn = new T.Vector3();
   S.t = 0; S.thd = 0; S.fwd = false; S.fa = 25; S.lastSample = -1; S.tStop = -1; newTrial();
   S.thA = THETA_I - 0.0065;                        // adresse : face ≈ 8 mm derrière la balle
   S.Tb = T_BACK; S.T0 = S.Tb + 0.06;                  // arrière-swing 0,55 s + transition 0,06 s
@@ -514,6 +532,7 @@ function reset() {
   if (S.traj) { S.T0 = S.traj.tTop; applyTraj(0); }
   else { S.th = S.thA; placePutter(); pad.pla = plausScore(S.alpha * L_PEND, params.vp, S.Tb, T_FWD);
     pad.auto = { t: [], x: [], v: [], x0: S.pivot.x + Math.cos(S.thA) * S.d0.x - Math.sin(S.thA) * S.d0.y }; pad.bub = { x: 0, y: 0, vx: 0, vy: 0 }; }
+  fn.set(1, 0, 0).transformDirection(faceObj.matrixWorld); S.loftAddr = Math.atan2(fn.y, Math.hypot(fn.x, fn.z)) * 180 / Math.PI;   // loft à l'adresse (pour le rapport)
 }
 // pose de la tête pilotée par une trajectoire dessinée (position du centre de face + direction du chemin)
 function applyTraj(t) {
@@ -524,6 +543,7 @@ function applyTraj(t) {
   let th = (xf - px - d0.x) / -d0.y;                              // arc du pendule d'épaules : Fx(θ) = xf
   for (let i = 0; i < 3; i++) { const f = px + Math.cos(th) * d0.x - Math.sin(th) * d0.y - xf, fp = -Math.sin(th) * d0.x - Math.cos(th) * d0.y; th -= f / fp; }
   const yf = S.pivot.y + Math.sin(th) * d0.x + Math.cos(th) * d0.y;
+  S.pfx = xf; S.pfy = yf; S.pfz = zr;
   const dFx = -Math.sin(th) * d0.x - Math.cos(th) * d0.y, dFy = Math.cos(th) * d0.x - Math.sin(th) * d0.y;
   S.vf.set(vx, vx * dFy / dFx, vz);
   const dphi = ended ? 0 : (tr.phi[k1] - tr.phi[k]) * 1000;
@@ -621,7 +641,7 @@ function stepCore(dt) {
       if (S.cs === 0 && vn < 0) {                                  // début du contact
         S.cs = 1; playImpact(Math.abs(S.headV)); S.vIn = -vn; S.hit = true; S.tHit = S.t; S.tC0 = S.t; S.Jn = 0; S.Ur.set(0, 0, 0); S.Pu.set(0, 0, 0); S.Wr.set(0, 0, 0);
         S.eC = Math.max(0.55, Math.min(0.9, 0.86 - 0.05 * S.vIn));  // la restitution diminue avec la vitesse d'impact
-        S.headLaunch = S.headV; S.fnIn.copy(fn); S.vfIn.copy(vc); S.latIn = latZ; S.yawIn = S.yawNow;
+        S.headLaunch = S.headV; S.fnIn.copy(fn); S.vfIn.copy(vc); S.fcIn.copy(fc); S.latIn = latZ; S.yawIn = S.yawNow;
         if (!S.traj) S.fol = { t0: S.t, p0: S.th, v0: S.thd, a0: 0.2 * S.alpha, p1: S.th + 0.6 * S.thd * T_FOL };
       }
       if (S.cs === 1) {
@@ -644,7 +664,7 @@ function stepCore(dt) {
       }
     } else if (S.cs === 1) end = true;
     if (S.cs === 1 && end) {                                       // fin du contact : bilan
-      S.cs = 2; S.tC1 = S.t; S.launch = v.length(); S.spinLaunch = w.length() * 60 / (2 * Math.PI);
+      S.cs = 2; S.tC1 = S.t; S.launchAng = Math.atan2(v.y, Math.hypot(v.x, v.z)) * 180 / Math.PI; S.spinBack = w.z > 0; S.launch = v.length(); S.spinLaunch = w.length() * 60 / (2 * Math.PI);
       if (!S.traj) {
         const v0 = S.thd - S.Jn * S.fnIn.x / (M_EFF * L_PEND);   // la tête perd la vitesse cédée à la balle
         S.fol = { t0: S.t, p0: S.th, v0, a0: 0.2 * S.alpha, p1: S.th + 0.6 * v0 * T_FOL };
@@ -697,6 +717,12 @@ function stepCore(dt) {
     if (S.t < S.T0) S.cur.back.push(S.t * 1000, -S.headV);
     else { S.cur.fwd.push((S.t - S.T0) * 1000, S.headV); if (S.hit && S.cur.imp === null) S.cur.imp = (S.tHit - S.T0) * 1000; }
     if (!S.traj && pad.auto) { const th = S.th; pad.auto.t.push(S.t); pad.auto.x.push(S.pivot.x + Math.cos(th) * S.d0.x - Math.sin(th) * S.d0.y - pad.auto.x0); pad.auto.v.push(Math.abs(S.headV)); }
+    if (S.rec) {                                                  // enregistrement du centre de face pour le rapport
+      let fx, fy, fz, yaw;
+      if (S.traj) { fx = S.pfx; fy = S.pfy; fz = S.pfz; yaw = S.yawNow; }
+      else { const th = S.th; fx = S.pivot.x + Math.cos(th) * S.d0.x - Math.sin(th) * S.d0.y; fy = S.pivot.y + Math.sin(th) * S.d0.x + Math.cos(th) * S.d0.y; fz = 0; yaw = 0; }
+      const r = S.rec; r.t.push(S.t); r.x.push(fx); r.y.push(fy); r.z.push(fz); r.yaw.push(yaw); r.v.push(S.headV);
+    }
     S.lastSample = S.t;
   }
 
@@ -824,7 +850,7 @@ document.querySelectorAll('#camseg button').forEach(b => { const on = b.dataset.
 }
 let uiHidden = false;
 function toggleUI() { uiHidden = !uiHidden; for (const id of ['panel', 'chartbox', 'pad']) $(id).style.display = uiHidden ? 'none' : '';
-  for (const id of ['drawbtn', 'aboutbtn']) $(id).style.visibility = uiHidden ? 'hidden' : '';   // invisibles mais gardent leur place : « Show Menu » reste où est « Hide Menu »
+  for (const id of ['drawbtn', 'aboutbtn', 'reportbtn']) $(id).style.visibility = uiHidden ? 'hidden' : '';   // invisibles mais gardent leur place : « Show Menu » reste où est « Hide Menu »
   $('hidebtn').textContent = uiHidden ? 'Show Menu' : 'Hide Menu'; }
 $('hidebtn').addEventListener('click', toggleUI);
 { const ab = $('about'), toggleAbout = v => { ab.hidden = !v; };
@@ -856,7 +882,7 @@ const hud = $('hud');
   let m0 = false; try { m0 = localStorage.getItem('chartMin') === '1'; } catch (e) {}
   apply(m0);
   $('chartbox').querySelector('h2').addEventListener('click', () => apply(!box.classList.contains('min')));
-  $('chartclear').addEventListener('click', e => { e.stopPropagation(); trials.length = 0; if (S.cur) { S.cur.back = []; S.cur.fwd = []; S.cur.imp = null; } });
+  $('chartclear').addEventListener('click', e => { e.stopPropagation(); shots.length = 0; trials.length = 0; if (S.cur) { S.cur.back = []; S.cur.fwd = []; S.cur.imp = null; } });
 }
 
 /* ───────────── dessin du swing à la souris ───────────── */
@@ -1172,6 +1198,378 @@ function drawPad() {
   else if (!pad.traj && !pad.drawing) { c.fillStyle = 'rgba(255,255,255,.55)'; c.textAlign = 'center'; c.fillText('Un point toutes les 50 ms : plus ils sont espacés, plus la tête va vite.', PAD_W / 2, PAD_H - 24); }
 }
 
+const LOGO_SRC = (document.querySelector('#splash img') || {}).src || '';
+/* ───────────── rapport de coup : mise en page inspirée d'un rapport professionnel d'analyse du putting (7 pages) ───────────── */
+const shots = [];                                                // les 5 derniers coups de la session
+const RP_COL = ['#1a1aa6', '#2d9d2d', '#b00000', '#17a2a2', '#a020a0'];
+const RP_PAGES = ['Cover', 'Aim', 'Direction', 'Path&Spot', 'Rotation', 'Launch', 'Dynamics'];
+let rpPage = 1, rpN = -1;
+const rmean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+const rsd = a => { const m = rmean(a); return Math.sqrt(rmean(a.map(v => (v - m) * (v - m)))); };
+const rsmooth = (a, w) => a.map((_, i) => { let s = 0, c = 0; for (let j = Math.max(0, i - w); j <= Math.min(a.length - 1, i + w); j++) { s += a[j]; c++; } return s / c; });
+const DEG = 180 / Math.PI;
+
+/* ── capture d'un coup (à partir de l'enregistrement S.rec, pris toutes les 3 ms) ── */
+function buildShot() {
+  const R = S.rec, im = S.imp; if (!im || !R || R.t.length < 20) return null;
+  const n = R.t.length, T = R.t, X = R.x, Y = R.y, Z = R.z, V = R.v, YW = rsmooth(R.yaw.map(v => v * DEG), 3);
+  let iI = T.findIndex(t => t >= S.tHit); if (iI < 1) iI = 1;
+  const tTop = S.traj ? S.T0 : S.Tb; let iTop = T.findIndex(t => t >= tTop); if (iTop < 1) iTop = 1;
+  let iE = n - 1; while (iE > iI + 2 && Math.abs(V[iE]) < 0.03) iE--;
+  const xI = X[iI], idxAt = d => { for (let i = iTop; i <= iE; i++) if (X[i] - xI >= d) return i; return iE; };
+  const iB = idxAt(-0.10), iA = idxAt(0.10);
+  const dir = i => { const a = Math.max(0, i - 5), b = Math.min(n - 1, i + 5); return Math.atan2(Z[b] - Z[a], X[b] - X[a]) * DEG; };
+  const dtt = (a, b) => Math.max(1e-4, T[b] - T[a]);
+  const rate = i => { const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4); return (YW[b] - YW[a]) / dtt(a, b); };
+  let xTop = 1e9; for (let i = 0; i <= iTop; i++) xTop = Math.min(xTop, X[i]);
+  const AV = rsmooth(V.map(Math.abs), 2), accAt = i => { const a = Math.max(0, i - 4), b = Math.min(n - 1, i + 4); return (AV[b] - AV[a]) / dtt(a, b) * 1000; };
+  const backLen = (X[0] - xTop) * 1000, fwdLen = Math.max(1, (X[iE] - xTop) * 1000);
+  const tBack = (S.traj ? Math.max(0.05, S.T0 - 0.12) : S.Tb) * 1000, tImp = (S.tHit - S.T0) * 1000, tFwd = Math.max(50, (T[iE] - S.T0) * 1000);
+  const rotB = -(YW[iI] - YW[iB]), rotA = -(YW[iA] - YW[iI]);
+  const arc = Math.abs((dir(iA) - dir(iB)) / Math.max(0.02, X[iA] - X[iB]));
+  // séries
+  const sp = { b: [], f: [], ab: [], af: [] };
+  for (let i = 0; i <= iTop; i += 2) { sp.b.push([T[i] * 1000, Math.abs(V[i]) * 1000]); sp.ab.push([T[i] * 1000, accAt(i)]); }
+  for (let i = iTop; i <= iE; i += 2) { const t = (T[i] - S.T0) * 1000; sp.f.push([t, Math.abs(V[i]) * 1000]); sp.af.push([t, accAt(i)]); }
+  const yaw = [], yrate = [], yacc = [];
+  for (let i = iTop; i <= iE; i += 2) { if (Math.abs(V[i]) < 0.15) continue; const t = (T[i] - S.T0) * 1000; yaw.push([t, YW[i]]); yrate.push([t, rate(i)]); }
+  const rr = yrate.map(p => p[1]), rrS = rsmooth(rr, 3);
+  for (let i = 1; i < yrate.length; i++) yacc.push([yrate[i][0], (rrS[i] - rrS[i - 1]) / ((yrate[i][0] - yrate[i - 1][0]) / 1000)]);
+  let accPk = 0; yacc.forEach(p => { if (p[0] >= (T[iB] - S.T0) * 1000 && p[0] <= (T[iA] - S.T0) * 1000) accPk = Math.max(accPk, Math.abs(p[1])); });
+  const sticks = []; for (let d = -0.1; d <= 0.1001; d += 0.0125) { const i = idxAt(d); sticks.push([d * 1000, YW[i] - dir(i)]); }
+  const path = [], side = [], pathB = []; for (let i = 0; i <= iE; i += 2) { const q = [(X[i] - xI) * 1000, Z[i] * 1000]; (i < iTop ? pathB : path).push(q); side.push([(X[i] - xI) * 1000, (Y[i] - Y[iI]) * 1000]); }
+  if (pathB.length) path.unshift(pathB[pathB.length - 1]);
+  const relB = YW[iB] - dir(iB), relA = YW[iA] - dir(iA);
+  return {
+    faceAddr: YW[0], faceImp: im.face, faceChg: im.face - YW[0], ballDir: im.start, pathImp: im.path, ftp: im.face - im.path, arc,
+    backLen, fwdLen, ratio: backLen / fwdLen, spot: im.off, rise: Math.atan2(S.vfIn.y, S.vfIn.x) * DEG, height: S.fcIn.y * 1000 - 17,
+    shaft: im.loft - params.loft, loftA: S.loftAddr, loftI: im.loft, launch: S.launchAng, spinBack: S.spinBack,
+    rotB, rotA, rotRate: rate(iI), rotTot: YW[iE] - YW[iTop], rotRel: relA - relB, rotSym: rotA - rotB, rotAcc: accPk,
+    yStart: YW[iTop], yImp: YW[iI], yEnd: YW[iE],
+    backT: tBack, impT: tImp, fwdT: tFwd, spd: im.speed * 1000, rhythm: tBack / Math.max(1, tImp), impTim: tImp / tFwd,
+    sp, yaw, yrate, yacc, sticks, path, pathB, side, speedBall: S.launch, drawn: !!S.traj
+  };
+}
+function captureShot() {
+  if (S.shotDone) return; S.shotDone = true;
+  const sh = buildShot(); if (sh) { shots.push(sh); while (shots.length > 5) shots.shift(); }
+}
+
+/* ── paramètres : plage du curseur, zone idéale (gris), tolérance de régularité ── */
+const PD = {
+  faceAddr: { min: -10, max: 10, lo: -2, hi: 2, ticks: [-10, -5, 0, 5, 10], l: 'closed', r: 'open', sref: 4.7 },
+  faceChg: { min: -10, max: 10, lo: -1.5, hi: 1.5, ticks: [-10, -5, 0, 5, 10], l: 'closing', r: 'opening', sref: 3 },
+  faceImp: { min: -10, max: 10, lo: -1, hi: 1, ticks: [-10, -5, 0, 5, 10], l: 'closed', r: 'open', sref: 2.4 },
+  ballDir: { min: -10, max: 10, lo: -1, hi: 1, ticks: [-10, -5, 0, 5, 10], l: 'left', r: 'right', sref: 2.4 },
+  pathImp: { lo: -1.5, hi: 1.5, sref: 3 }, ftp: { lo: -1.5, hi: 1.5, sref: 3 }, arc: { lo: -15, hi: 15, sref: 60 },
+  backLen: { min: 100, max: 400, lo: 200, hi: 290, ticks: [100, 175, 250, 325, 400], l: 'short', r: 'long', sref: 60 },
+  fwdLen: { min: 300, max: 1000, lo: 520, hi: 800, ticks: [300, 475, 650, 825, 1000], l: 'short', r: 'long', sref: 150 },
+  ratio: { min: 0.2, max: 0.6, lo: 0.33, hi: 0.42, ticks: [0.2, 0.3, 0.4, 0.5, 0.6], l: 'Followthrough long', r: 'Backswing long', sref: 0.0886 },
+  spot: { min: -30, max: 30, lo: -4, hi: 4, ticks: [-30, -20, -10, 0, 10, 20, 30], l: '', r: '', sref: 6 },
+  rise: { min: -2, max: 8, lo: 2, hi: 4, ticks: [-2, 0, 2, 4, 6, 8], l: '', r: '', sref: 1.5 },
+  height: { lo: 0, hi: 6, sref: 2 }, shaft: { lo: -1, hi: 1, sref: 1.5 }, loftA: { lo: 2, hi: 4.5, sref: 1.2 }, loftI: { lo: 2, hi: 4.5, sref: 1.2 }, launch: { lo: 2, hi: 4, sref: 1.5 },
+  rotB: { min: -2, max: 6, lo: 0.5, hi: 2, ticks: [-2, 0, 2, 4, 6], l: 'reduced', r: 'increased', sref: 1.5 },
+  rotA: { min: -2, max: 6, lo: 0.5, hi: 2, ticks: [-2, 0, 2, 4, 6], l: 'reduced', r: 'increased', sref: 1.5 },
+  rotRate: { min: 50, max: -100, lo: -24, hi: -10, ticks: [50, 25, 0, -25, -50, -75, -100], l: 'reduced', r: 'increased', sref: 12 },
+  rotRel: { min: -2, max: 6, lo: 0.3, hi: 2, ticks: [-2, 0, 2, 4, 6], l: 'reduced', r: 'increased', sref: 1.5 },
+  rotSym: { lo: -1, hi: 1, sref: 1.5 }, rotAcc: { lo: 0, hi: 600, sref: 300 },
+  backT: { min: 400, max: 1000, lo: 580, hi: 760, ticks: [400, 500, 600, 700, 800, 900, 1000], l: 'short', r: 'long', sref: 300 },
+  fwdT: { min: 600, max: 1200, lo: 700, hi: 910, ticks: [600, 700, 800, 900, 1000, 1100, 1200], l: 'short', r: 'long', sref: 300 },
+  spd: { min: 700, max: 2500, lo: 1150, hi: 1650, ticks: [700, 1000, 1300, 1600, 1900, 2200, 2500], l: 'slow', r: 'fast', sref: 350 },
+  rhythm: { lo: 1.9, hi: 2.3, sref: 1 }, impTim: { lo: 0.33, hi: 0.42, sref: 0.15 }
+};
+function rpAgg() {
+  const n = shots.length, A = {};
+  for (const k in PD) {
+    const d = PD[k], vals = shots.map(s => s[k]), m = rmean(vals), hw = Math.abs(d.hi - d.lo) / 2;
+    A[k] = { vals, m, cons: n < 2 ? null : Math.round(100 * Math.exp(-rsd(vals) / d.sref)), sc: Math.round(Math.max(0, 100 * (1 - Math.abs(m - (d.lo + d.hi) / 2) / (2.5 * hw)))) };
+  }
+  const avg = ks => Math.round(rmean(ks.map(k => A[k].sc)));
+  const cs = Object.values(A).map(a => a.cons).filter(c => c != null);
+  A.tend = avg(['faceAddr', 'faceImp', 'pathImp', 'ballDir', 'spot', 'rise', 'loftI', 'launch']);
+  A.timing = avg(['backT', 'fwdT', 'spd', 'rhythm', 'impTim']);
+  A.consT = cs.length ? Math.round(rmean(cs)) : null;
+  A.overall = Math.round(rmean([A.tend, A.timing].concat(A.consT == null ? [] : [A.consT])));
+  return A;
+}
+
+/* ── primitives SVG ── */
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const tx = (x, y, t, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || 14}" fill="${o.f || '#111'}" text-anchor="${o.a || 'start'}"${o.w ? ` font-weight="${o.w}"` : ''}${o.r ? ` transform="rotate(${o.r} ${x} ${y})"` : ''}>${esc(t)}</text>`;
+const rc = (x, y, w, h, o = {}) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${o.f || 'none'}" stroke="${o.s || 'none'}" stroke-width="${o.sw || 1}"${o.rx ? ` rx="${o.rx}"` : ''}/>`;
+const ln = (x1, y1, x2, y2, o = {}) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${o.s || '#000'}" stroke-width="${o.sw || 1}"${o.d ? ` stroke-dasharray="${o.d}"` : ''}/>`;
+const pls = (pts, o = {}) => pts.length < 2 ? '' : `<polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}" fill="none" stroke="${o.s || '#000'}" stroke-width="${o.sw || 1.5}" stroke-linejoin="round"${o.d ? ` stroke-dasharray="${o.d}"` : ''}/>`;
+const cir = (x, y, r, o = {}) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${o.f || 'none'}" stroke="${o.s || 'none'}" stroke-width="${o.sw || 1}"/>`;
+const RP_DEFS = `<defs>
+<linearGradient id="gGv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34b000"/><stop offset="1" stop-color="#1d7a00"/></linearGradient>
+<linearGradient id="gYv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6d300"/><stop offset="1" stop-color="#b09a00"/></linearGradient>
+<linearGradient id="gRv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e03a3a"/><stop offset="1" stop-color="#8c1010"/></linearGradient>
+<linearGradient id="gGh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1d7a00"/><stop offset="1" stop-color="#34b000"/></linearGradient>
+<linearGradient id="gYh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b09a00"/><stop offset="1" stop-color="#e6d300"/></linearGradient>
+<linearGradient id="gRh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8c1010"/><stop offset="1" stop-color="#e03a3a"/></linearGradient>
+<linearGradient id="gBlade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e4e7e9"/><stop offset=".5" stop-color="#bcc1c5"/><stop offset="1" stop-color="#8e949a"/></linearGradient>
+<linearGradient id="gBladeV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f1"/><stop offset=".5" stop-color="#b9bec2"/><stop offset="1" stop-color="#8b9197"/></linearGradient>
+<radialGradient id="gBall" cx=".35" cy=".32" r=".75"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#c9ced2"/></radialGradient>
+</defs>`;
+const gcol = p => p == null ? 'G' : p >= 75 ? 'G' : p >= 50 ? 'Y' : 'R';
+const fcol = p => ({ G: '#2da500', Y: '#f0d800', R: '#d01818' })[gcol(p)];
+const fdir = (v, a, b, d = 1) => `${Math.abs(v).toFixed(d)}° ${v >= 0 ? a : b}`;
+
+function panel(x, y, w, h, title, o = {}) {                       // cadre + bandeau gris (valeur à droite, drapeau de couleur)
+  let s = rc(x, y, w, h, { f: '#fff', s: '#222' });
+  if (title) {
+    s += rc(x, y, w, 38, { f: '#9d9d9d' });
+    if (o.val == null) s += tx(x + w / 2, y + 28, title, { s: 26, f: '#fff', a: 'middle' });
+    else {
+      s += tx(x + 14, y + 28, title, { s: 26, f: '#fff' });
+      s += `<text x="${x + w - 30}" y="${y + 28}" text-anchor="end" fill="#111"><tspan font-size="25">${esc(o.val)}</tspan><tspan font-size="19"> ${esc(o.unit || '')}</tspan></text>`;
+      s += rc(x + w - 16, y, 16, 38, { f: fcol(o.flag) });
+    }
+  }
+  return s;
+}
+function consBar(x, y, w, pct) {
+  let s = tx(x, y - 7, 'Consistency', { s: 19 }) + tx(x + 118, y - 7, pct == null ? '—' : pct + '%', { s: 26 }) + rc(x, y, w, 20, { f: '#eee', s: '#222' });
+  if (pct != null) { const fw = w * pct / 100; s += `<rect x="${x}" y="${y}" width="${fw}" height="20" fill="url(#g${gcol(pct)}h)"/>` + ln(x + fw, y - 2, x + fw, y + 22, { sw: 2.5 }); }
+  return s;
+}
+function vBar(x, y, h, pct, cap, w = 28) {
+  let s = rc(x, y, w, h, { f: '#eee', s: '#222' });
+  if (pct != null) { const fh = h * pct / 100; s += `<rect x="${x}" y="${y + h - fh}" width="${w}" height="${fh}" fill="url(#g${gcol(pct)}v)"/>` + ln(x - 3, y + h - fh, x + w + 3, y + h - fh, { sw: 2.5 }); }
+  return s + tx(x + w / 2, y - 10, pct == null ? '—' : pct + '%', { s: 21, a: 'middle' }) + tx(x + w / 2, y + h + 18, cap, { s: 12, a: 'middle' });
+}
+function slider(x, y, w, d, vals) {                                // zone idéale grise + un trait coloré par putt
+  const X = v => x + (v - d.min) / (d.max - d.min) * w, h = 22, a = X(d.lo), b = X(d.hi);
+  let s = rc(x, y, w, h, { f: '#fff', s: '#222' }) + rc(Math.min(a, b), y + 1, Math.abs(b - a), h - 2, { f: '#c4c4c4' });
+  d.ticks.forEach(t => { s += tx(X(t), y - 4, String(t), { s: 9, a: 'middle' }); });
+  vals.forEach((v, i) => { const px = Math.max(x + 1, Math.min(x + w - 1, X(v))); s += ln(px, y, px, y + h, { s: RP_COL[i], sw: 2.2 }); });
+  return s + tx(x + 2, y + h + 12, d.l, { s: 11, f: '#1a1aa6' }) + tx(x + w - 2, y + h + 12, d.r, { s: 11, f: '#1a1aa6', a: 'end' });
+}
+function srow(lx, sx, sw, vx, y, label, d, vals, text, sub) {
+  return tx(lx, y + 17, label, { s: 18 }) + (sub ? tx(lx, y + 31, sub, { s: 10, f: '#1a1aa6' }) : '') + slider(sx, y, sw, d, vals) + tx(vx, y + 17, text, { s: 19 });
+}
+const vlist = (x, y, vals, f) => vals.map((v, i) => tx(x, y + i * 31, f(v), { s: 15, f: RP_COL[i] })).join('');
+
+function putTop(cx, cy, ang, k = 1) {                              // putter vu de dessus, face à gauche ; ang > 0 = ouvert
+  return `<g transform="translate(${cx} ${cy}) rotate(${ang}) scale(${k})">
+<path d="M-8,110 L-34,170 L-14,180 L12,126 Z" fill="url(#gBlade)" stroke="#6a6f74" stroke-width="2"/>
+<path d="M0,-132 L66,-132 Q76,-132 76,-122 L76,122 Q76,132 66,132 L0,132 Z" fill="url(#gBlade)" stroke="#6a6f74" stroke-width="2"/>
+<rect x="10" y="-122" width="58" height="244" rx="7" fill="none" stroke="#8d9297" stroke-width="2"/>
+<line x1="0" y1="0" x2="46" y2="0" stroke="#000" stroke-width="3.5"/></g>`;
+}
+function aimLines(cx, cy, ang, L = 230, o = {}) {
+  const kk = o.k || 1;                   // direction de la face (rouge), ligne de visée (pointillés), coin rose
+  const r = ang / DEG, ex = cx - L * Math.cos(r), ey = cy - L * Math.sin(r), fx = cx + 150 * kk * Math.sin(r), fy = cy - 150 * kk * Math.cos(r), gx = cx - 150 * kk * Math.sin(r), gy = cy + 150 * kk * Math.cos(r);
+  return `<polygon points="${cx},${cy} ${ex},${ey} ${cx - L},${cy}" fill="rgba(230,40,40,.2)"/>` + ln(cx - L - 20, cy, cx + (o.r || 160), cy, { d: '2 3' }) + ln(ex, ey, cx, cy, { s: '#c00', sw: 1.6 }) + ln(fx, fy, gx, gy, { s: '#c00', sw: 1.4, d: '2 3' });
+}
+function ballSvg(cx, cy, r) {
+  let s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#gBall)" stroke="#aab0b5" stroke-width="1.5"/>`;
+  for (let i = 0; i < 22; i++) { const a = i * 2.39996, d = Math.sqrt((i + .5) / 22) * r * .82; s += `<circle cx="${(cx + Math.cos(a) * d).toFixed(1)}" cy="${(cy + Math.sin(a) * d).toFixed(1)}" r="${(r * .09).toFixed(1)}" fill="none" stroke="#bfc4c8" stroke-width="1"/>`; }
+  return s;
+}
+function arrow(x1, y1, x2, y2, col, w = 3) {
+  const a = Math.atan2(y2 - y1, x2 - x1), h = 12;
+  return ln(x1, y1, x2, y2, { s: col, sw: w }) + `<polygon points="${x2},${y2} ${x2 - h * Math.cos(a - .45)},${y2 - h * Math.sin(a - .45)} ${x2 - h * Math.cos(a + .45)},${y2 - h * Math.sin(a + .45)}" fill="${col}"/>`;
+}
+function bigArrow(x, y, w, h, ang, col = 'rgba(160,230,245,.6)') {   // flèche creuse vers la gauche
+  return `<g transform="translate(${x} ${y}) rotate(${ang})"><polygon points="${-w / 2},0 ${-w / 2 + 42},${-h} ${-w / 2 + 42},${-h * .55} ${w / 2},${-h * .55} ${w / 2},${h * .55} ${-w / 2 + 42},${h * .55} ${-w / 2 + 42},${h}" fill="${col}" stroke="#3aa6c0" stroke-width="1.4"/></g>`;
+}
+function gauge(cx, cy, r, t) {
+  const cols = ['#a9c8de', '#82b2d4', '#5c9cc8', '#3b88bb', '#2b78ae', '#1c68a0', '#0e5a8f'], a0 = 200, st = 220 / 7;
+  let s = '';
+  const pt = (rad, a) => [cx + rad * Math.cos(a / DEG), cy - rad * Math.sin(a / DEG)];
+  cols.forEach((c, i) => { const A = a0 - i * st, B = A - st + 2.2, p1 = pt(r, A), p2 = pt(r, B), p3 = pt(r * .62 - i * 2, B), p4 = pt(r * .62 - i * 2, A); s += `<path d="M${p1} A${r},${r} 0 0 1 ${p2} L${p3} A${r * .62 - i * 2},${r * .62 - i * 2} 0 0 0 ${p4} Z" fill="${c}"/>`; });
+  const na = a0 - 220 * Math.max(0, Math.min(1, t)), tip = pt(r * .88, na), b1 = pt(14, na + 90), b2 = pt(14, na - 90);
+  s += `<polygon points="${tip} ${b1} ${b2}" fill="#5f6368"/>` + cir(cx, cy, 15, { f: '#5f6368' });
+  { const pa = pt(r + 24, 152), pb = pt(r + 24, 28); s += tx(pa[0], pa[1], 'slow', { s: 16, f: '#1a1aa6', a: 'middle', r: -58 }) + tx(pb[0], pb[1], 'fast', { s: 16, f: '#1a1aa6', a: 'middle', r: 58 }); }
+  return s;
+}
+const pageHead = title => tx(30, 45, 'Player:', { s: 22 }) + tx(130, 45, 'Simulated player', { s: 22 }) + tx(30, 68, 'Session:', { s: 22 }) + tx(130, 68, 'Putting session', { s: 22 })
+  + tx(728, 57, title, { s: 30, a: 'middle' }) + `<g>${cir(1262, 40, 11, { f: '#fff', s: '#555', sw: 1.5 })}${tx(1280, 49, 'Precision', { s: 30, f: '#333' })}${tx(1280, 74, 'Putting', { s: 30, f: '#d4153c', w: 700 })}</g>`;
+const noData = () => tx(728, 420, 'No putt recorded yet — play a putt (Replay), then open the report.', { s: 28, a: 'middle', f: '#666' });
+const faceBlock = (x, y, vals, meanV, angMean, bars, text, label) => {   // grande vue de face (pages Aim et Direction)
+  return aimLines(x, y, angMean) + putTop(x, y, angMean) + vlist(x - 310, y - 47, vals, v => v.toFixed(2)) + vBar(x + 205, y - 65, 160, bars[0], label) + vBar(x + 285, y - 65, 160, bars[1], 'Consistency') + tx(x, y + 202, text, { s: 28, a: 'middle' });
+};
+
+/* ── pages ── */
+function pgCover(A) {
+  return rc(0, 0, 1456, 816, { f: '#f6f6f6' }) + `<image href="${LOGO_SRC}" x="290" y="60" width="876" height="493" preserveAspectRatio="xMidYMid slice" opacity=".9"/>`
+    + rc(0, 560, 1456, 215, { f: 'rgba(110,110,110,.62)' })
+    + tx(728, 632, 'Precision Putting Report', { s: 62, a: 'middle', f: '#fff' }) + tx(560, 684, 'Player:', { s: 30, f: '#fff' }) + tx(700, 684, 'Simulated player (1.75 m)', { s: 30, f: '#fff' })
+    + tx(560, 722, 'Session:', { s: 30, f: '#fff' }) + tx(700, 722, `${shots.length} putt${shots.length > 1 ? 's' : ''}`, { s: 30, f: '#fff' }) + tx(560, 760, 'Date:', { s: 30, f: '#fff' }) + tx(700, 760, new Date().toLocaleDateString('en-GB'), { s: 30, f: '#fff' })
+    + tx(30, 805, 'Report: Putting Stroke simulation', { s: 13 });
+}
+function pgAim(A) {
+  const f = A.faceAddr, c = A.faceChg, n = shots.length;
+  let s = pageHead('Aim') + panel(22, 88, 703, 333, 'Data Summary') + panel(22, 422, 703, 371, '') + panel(731, 88, 703, 705, 'Face Aim');
+  const kv = (x, y, k, v, big) => tx(x, y, k, { s: big ? 22 : 12 }) + tx(x + (big ? 112 : 72), y, v, { s: big ? 22 : 12 });
+  s += kv(76, 176, 'Project:', 'Precision Putting', 1) + tx(76, 196, 'Description:', { s: 12 }).replace('</text>', '</text>') + tx(148, 196, 'Simulation session', { s: 12 })
+    + kv(76, 234, 'Player:', 'Simulated player', 1) + tx(76, 254, 'Handicap:', { s: 12 }) + tx(148, 254, '—', { s: 12 }) + tx(76, 270, 'Lefthand:', { s: 12 }) + tx(148, 270, 'no', { s: 12 }) + tx(76, 286, 'Comment:', { s: 12 }) + tx(148, 286, 'Shoulder pendulum, 1.75 m player', { s: 12 })
+    + kv(76, 326, 'Putter', 'Virtual putter', 1) + tx(76, 346, 'Length:', { s: 12 }) + tx(148, 346, '35.0', { s: 12 }) + tx(76, 362, 'Loft:', { s: 12 }) + tx(148, 362, params.loft.toFixed(1), { s: 12 }) + tx(76, 378, 'Lie:', { s: 12 }) + tx(148, 378, (LIE * DEG).toFixed(1), { s: 12 })
+    + tx(433, 176, 'Session:', { s: 22 }) + tx(540, 176, '001 - Simulation', { s: 22 }) + tx(433, 196, 'Description:', { s: 12 }) + tx(507, 196, 'Virtual measurement', { s: 12 }) + tx(433, 212, 'Type:', { s: 12 }) + tx(507, 212, 'Simulation', { s: 12 })
+    + tx(433, 250, 'File:', { s: 22 }) + tx(540, 250, '001 - Simulation', { s: 22 }) + tx(433, 270, 'Date:', { s: 12 }) + tx(507, 270, new Date().toLocaleDateString('en-GB'), { s: 12 }) + tx(433, 286, 'Putts:', { s: 12 }) + tx(507, 286, String(n), { s: 12 });
+  // histogramme Tendency / Timing / Consistency / Overall
+  const vals = [A.tend, A.timing, A.consT, A.overall], names = ['Tendency', 'Timing', 'Consistency', 'Overall'];
+  s += rc(92, 478, 563, 51, { f: '#d9f9d2' }); for (let v = 0; v <= 100; v += 25) { const y = 682 - v * 2.04; s += ln(92, y, 655, y, { sw: 1 }) + tx(86, y + 4, String(v), { s: 11, a: 'end' }); }
+  s += ln(92, 478, 92, 682, { sw: 1 });
+  vals.forEach((v, i) => { const cx = 163 + i * 140; if (v != null) { const h = v * 2.04; s += `<rect x="${cx - 25}" y="${682 - h}" width="50" height="${h}" fill="url(#g${gcol(v)}v)" stroke="#555"/>`; } s += tx(cx, 706, names[i], { s: 16, a: 'middle' }) + rc(93 + i * 140, 733, 140, 28, { f: i === 3 ? '#dcdcdc' : '#fff', s: '#555' }) + tx(163 + i * 140, 753, v == null ? '—' : v.toFixed(1) + '%', { s: 17, a: 'middle' }); });
+  // face aim
+  s += rc(731, 126, 105, 93, { f: '#ffffd0', s: '#999' }) + `<polygon points="740,160 782,148 782,178" fill="#e0183c"/>` + cir(792, 165, 9, { f: '#ddd', s: '#888' }) + rc(810, 140, 8, 70, { f: '#aaa' });
+  s += faceBlock(1085, 372, f.vals, f.m, f.m, [f.sc, f.cons], fdir(f.m, 'open', 'closed'), 'Face Aim');
+  s += srow(765, 923, 347, 1298, 666, 'Face at address', PD.faceAddr, f.vals, fdir(f.m, 'open', 'closed')) + srow(765, 923, 347, 1298, 733, 'Face change', PD.faceChg, c.vals, fdir(c.m, 'opening', 'closing'));
+  return s;
+}
+function pgDirection(A) {
+  const f = A.faceImp, c = A.faceChg, p = A.pathImp, t = A.ftp, b = A.ballDir;
+  let s = pageHead('Direction') + panel(22, 88, 703, 705, 'Face Impact') + rc(22, 126, 105, 93, { f: '#ffffd0', s: '#999' }) + arrow(70, 170, 36, 170, '#000', 3);
+  s += faceBlock(372, 372, f.vals, f.m, f.m, [f.sc, f.cons], fdir(f.m, 'open', 'closed'), 'Face Imp');
+  s += srow(55, 214, 346, 588, 666, 'Face at impact', PD.faceImp, f.vals, fdir(f.m, 'open', 'closed')) + srow(55, 214, 346, 588, 733, 'Ball direction', PD.ballDir, b.vals, fdir(b.m, 'right', 'left'));
+  // Face change
+  s += panel(731, 88, 349, 349, 'Face Change', { val: Math.abs(c.m).toFixed(1) + '°', unit: c.m >= 0 ? 'opening' : 'closing', flag: c.cons }) + aimLines(895, 226, c.m, 150, { r: 110, k: .62 }) + putTop(895, 226, c.m, .62) + tx(905, 372, 'Aim to Impact', { s: 23, f: '#1a1aa6', a: 'middle' }) + consBar(811, 396, 190, c.cons);
+  // Path impact : 5 courbes
+  s += panel(1085, 88, 349, 349, 'Path Impact', { val: Math.abs(p.m).toFixed(1) + '°', unit: p.m >= 0 ? 'right' : 'left', flag: p.cons });
+  shots.forEach((sh, i) => { const y0 = 205 + i * 33; s += ln(1165, y0, 1365, y0, { s: '#555', sw: 0.8, d: '3 3' }) + pls(sh.pathB.concat(sh.path).filter(q => q[0] > -300 && q[0] < 400).map(q => [1255 - q[0] * 0.3, y0 + q[1] * 1.2]), { s: RP_COL[i], sw: 1.6 }) + rc(1252, y0 - 3, 6, 6, { f: '#000' }); });
+  s += consBar(1165, 396, 190, p.cons);
+  // Face to path
+  s += panel(731, 441, 349, 351, 'Face to Path', { val: Math.abs(t.m).toFixed(1) + '°', unit: t.m >= 0 ? 'open' : 'closed', flag: t.cons }) + putTop(900, 588, p.m, .55) + bigArrow(905, 582, 270, 26, p.m) + ln(765, 582, 1045, 582, { s: '#c00', sw: 1.4 }) + consBar(811, 752, 190, t.cons);
+  // Ball direction
+  s += panel(1085, 441, 349, 351, 'Ball Direction', { val: Math.abs(b.m).toFixed(1) + '°', unit: b.m >= 0 ? 'right' : 'left', flag: b.cons }) + ballSvg(1247, 585, 36) + putTop(1325, 600, f.m, .55) + arrow(1210, 582 - b.m * 1.2, 1120, 582 - b.m * 1.2, '#1a1aa6', 2.5) + consBar(1165, 752, 190, b.cons);
+  return s;
+}
+function pgPath(A) {
+  const r = A.ratio, bl = A.backLen, fl = A.fwdLen, sp = A.spot, pd = A.pathImp, ar = A.arc;
+  let s = pageHead('Path&Spot') + panel(22, 88, 703, 705, 'Putter path - Top view') + rc(22, 126, 105, 93, { f: '#ffffd0', s: '#999' }) + arrow(110, 160, 40, 160, '#000', 3);
+  shots.forEach((sh, i) => { const y0 = 290 + i * 34, k = 0.3; s += tx(70, y0 + 3, sh.ratio.toFixed(2), { s: 15, f: RP_COL[i] }) + ln(190, y0 - 5, 475, y0 - 5, { s: '#555', sw: .8, d: '3 3' }) + pls(sh.path.map(q => [365 - q[0] * k, y0 + q[1] * 0.9]), { s: RP_COL[i], sw: 1.7 }) + rc(362, y0 - 3, 6, 6, { f: '#000' }); });
+  s += vBar(587, 300, 160, r.sc, 'BS Ratio') + vBar(652, 300, 160, r.cons, 'Consistency') + tx(373, 553, 'Backswing Ratio: ' + r.m.toFixed(2), { s: 28, a: 'middle' });
+  s += srow(55, 214, 346, 588, 622, 'Backswing length', PD.backLen, bl.vals, bl.m.toFixed(1) + ' mm') + srow(55, 214, 346, 588, 678, 'Fdw. swing length', PD.fwdLen, fl.vals, fl.m.toFixed(1) + ' mm') + srow(55, 214, 346, 588, 734, 'Backswing ratio', PD.ratio, r.vals, r.m.toFixed(2));
+  // impact spot : face avec insert noir
+  s += panel(731, 88, 703, 349, 'Impact Spot');
+  s += `<path d="M900,250 Q890,262 905,276 L1200,282 Q1228,276 1238,252 L1216,236 L1135,232 L1118,178 L1148,176 L1150,232 L920,236 Q905,238 900,250 Z" fill="url(#gBladeV)" stroke="#666" stroke-width="2"/>` + `<rect x="945" y="238" width="200" height="40" rx="18" fill="#161616"/>`;
+  shots.forEach((sh, i) => { const px = 1045 - sh.spot * 3.2, py = 258; s += ln(px - 9, py, px + 9, py, { s: RP_COL[i], sw: 2 }) + ln(px, py - 9, px, py + 9, { s: RP_COL[i], sw: 2 }); });
+  s += tx(752, 270, 'Lie: ' + (0).toFixed(1) + '° neutral', { s: 14 }) + vBar(1289, 160, 135, sp.sc, 'Spot') + vBar(1356, 160, 135, sp.cons, 'Consistency') + tx(1045, 330, Math.abs(sp.m).toFixed(1) + ' mm ' + (sp.m >= 0 ? 'toe' : 'heel'), { s: 24, a: 'middle' });
+  s += srow(765, 935, 335, 1298, 372, 'Impact spot', PD.spot, sp.vals, Math.abs(sp.m).toFixed(1) + ' mm ' + (sp.m >= 0 ? 'toe' : 'heel'));
+  // direction du chemin & arc
+  s += panel(731, 441, 349, 351, 'Path Direction', { val: Math.abs(pd.m).toFixed(1) + '°', unit: pd.m >= 0 ? 'right' : 'left', flag: pd.cons }) + bigArrow(905, 600, 270, 28, pd.m) + ln(765, 600, 1045, 600, { s: '#c00', sw: 1.2 }) + ln(905, 570, 905, 630, { sw: 1, d: '2 3' }) + consBar(811, 752, 190, pd.cons);
+  s += panel(1085, 441, 349, 351, 'Path Arc', { val: Math.abs(ar.m).toFixed(1), unit: '°/m', flag: ar.cons == null ? null : 100 - Math.min(100, Math.abs(ar.m) * 2) });
+  shots.forEach((sh, i) => { s += pls(sh.path.filter(q => q[0] > -400 && q[0] < 250).map(q => [1260 - q[0] * .28, 590 + q[1] * 1.3]), { s: RP_COL[i], sw: 1.8 }); });
+  s += ln(1150, 585, 1380, 585, { sw: 1, d: '3 3' }) + tx(1260, 640, Math.abs(ar.m) < 8 ? 'straight' : Math.abs(ar.m) < 25 ? 'moderate' : 'strong', { s: 24, f: '#1a1aa6', a: 'middle' }) + consBar(1165, 752, 190, ar.cons);
+  return s;
+}
+function pgRotation(A) {
+  const rb = A.rotB, ra = A.rotA, rr = A.rotRate, rl = A.rotRel, sy = A.rotSym, ac = A.rotAcc, n = shots.length;
+  const m = k => rmean(shots.map(s => s[k]));
+  let s = pageHead('Rotation') + panel(22, 88, 703, 705, 'Face Rotation') + panel(731, 88, 703, 349, 'Relative Rotation');
+  // trois positions de la face
+  s += tx(115, 150, 'End fwd. swing', { s: 12, a: 'middle' }) + tx(358, 150, 'Impact', { s: 12, a: 'middle' }) + tx(536, 150, 'Start fwd. swing', { s: 12, a: 'middle' }) + tx(212, 156, '10 cm', { s: 12, a: 'middle', f: '#1a1aa6' }) + tx(212, 170, 'after', { s: 12, a: 'middle', f: '#1a1aa6' }) + tx(448, 156, '10 cm', { s: 12, a: 'middle', f: '#1a1aa6' }) + tx(448, 170, 'before', { s: 12, a: 'middle', f: '#1a1aa6' });
+  s += ln(207, 180, 207, 345, { s: '#aaa', sw: 2, d: '8 5' }) + ln(447, 180, 447, 345, { s: '#aaa', sw: 2, d: '8 5' });
+  s += putTop(108, 262, m('yEnd'), .52) + putTop(300, 262, m('yImp'), .52) + putTop(480, 262, m('yStart'), .52);
+  s += arrow(470, 252, 348, 252, '#1a1aa6', 3) + arrow(292, 252, 152, 252, '#1a1aa6', 3);
+  s += tx(222, 238, fdir(-ra.m, 'opening', 'closing'), { s: 15, f: '#1a1aa6', a: 'middle' }) + tx(409, 238, fdir(-rb.m, 'opening', 'closing'), { s: 15, f: '#1a1aa6', a: 'middle' });
+  s += tx(110, 386, fdir(m('yEnd'), 'open', 'closed'), { s: 20, a: 'middle' }) + tx(300, 386, fdir(m('yImp'), 'open', 'closed'), { s: 20, a: 'middle' }) + tx(480, 386, fdir(m('yStart'), 'open', 'closed'), { s: 20, a: 'middle' });
+  s += vBar(587, 175, 175, rr.sc, 'RotRate') + vBar(652, 175, 175, rr.cons, 'Consistency');
+  // courbes angle de face et vitesse de rotation
+  const chart = (x, y, w, h, ymin, ymax, ticks, xmax, getS, label, zeroLine) => {
+    let c = ln(x, y, x, y + h, { sw: 1.2 }) + ln(x, y + (zeroLine ? h * (ymax / (ymax - ymin)) : h), x + w, y + (zeroLine ? h * (ymax / (ymax - ymin)) : h), { sw: 1.2 });
+    const Y = v => y + (ymax - v) / (ymax - ymin) * h, X = t => x + t / xmax * w;
+    ticks.forEach(t => { c += ln(x - 3, Y(t), x, Y(t)) + tx(x - 6, Y(t) + 3, String(t), { s: 8, a: 'end' }); });
+    shots.forEach((sh, i) => { c += pls(getS(sh).filter(p => p[0] >= 0 && p[0] <= xmax).map(p => [X(p[0]), Y(Math.max(ymin, Math.min(ymax, p[1])))]), { s: RP_COL[i], sw: 1.4 }); });
+    return c + tx(x - 36, y + h / 2, label, { s: 9, a: 'middle', r: -90 });
+  };
+  s += chart(90, 420, 235, 120, -20, 15, [-20, -15, -10, -5, 0, 5, 10, 15], 1000, sh => sh.yaw, 'Face angle [deg] (fwd. swing)', true) + tx(208, 565, 'Total rotation: ' + Math.abs(m('rotTot')).toFixed(1) + '° ' + (m('rotTot') < 0 ? 'closing' : 'opening'), { s: 17, a: 'middle' });
+  s += chart(405, 420, 235, 120, -100, 50, [-100, -75, -50, -25, 0, 25, 50], 1000, sh => sh.yrate, 'Rotation [°/s] (fwd. swing)', true) + tx(520, 565, 'Rotation rate: ' + Math.abs(rr.m).toFixed(1) + ' °/s', { s: 17, a: 'middle' });
+  s += tx(130, 410, 'open', { s: 9, f: '#1a1aa6' }) + tx(130, 552, 'closed', { s: 9, f: '#1a1aa6' });
+  s += srow(47, 215, 346, 588, 622, 'Rotation before Imp', PD.rotB, rb.vals, fdir(-rb.m, 'opening', 'closing'), '(inside +-10 cm)') + srow(47, 215, 346, 588, 678, 'Rotation after Imp', PD.rotA, ra.vals, fdir(-ra.m, 'opening', 'closing'), '(inside +-10 cm)') + srow(47, 215, 346, 588, 734, 'Rotation Rate Imp', PD.rotRate, rr.vals, Math.abs(rr.m).toFixed(1) + '°/s ' + (rr.m < 0 ? 'closing' : 'opening'));
+  // rotation relative au chemin : bâtonnets
+  s += rc(836, 162, 410, 122, { f: '#fff', s: '#222' }) + ln(1041, 162, 1041, 284, { s: '#555' }) + ln(866, 162, 866, 284, { s: '#555' }) + ln(1216, 162, 1216, 284, { s: '#555' });
+  shots.forEach((sh, i) => { const st = sh.sticks; st.forEach((q, j) => { const px = 1041 - (q[0]) * 1.75, ang = q[1] * 1.8 / DEG, col = q[1] > 0.5 ? '#e01818' : q[1] < -0.5 ? '#1a1aa6' : '#000'; s += ln(px - Math.sin(ang) * 26, 223 + i * 2 - Math.cos(ang) * 26, px + Math.sin(ang) * 26, 223 + i * 2 + Math.cos(ang) * 26, { s: col, sw: 1.8 }); }); s += pls(st.map(q => [1041 - q[0] * 1.75, 223 + i * 2 + q[1] * 0.6]), { s: RP_COL[i], sw: 1.2 }); });
+  s += arrow(1041, 308, 866, 308, '#1a1aa6', 2) + arrow(1041, 308, 1216, 308, '#1a1aa6', 2) + tx(950, 322, '10 cm / 4\'\'', { s: 10, a: 'middle' }) + tx(1041, 322, 'Impact', { s: 10, a: 'middle' }) + tx(1130, 322, '10 cm / 4\'\'', { s: 10, a: 'middle' }) + tx(1041, 342, 'Colors:  red = open   black = square   blue = closed', { s: 10, a: 'middle' });
+  s += vBar(1289, 160, 135, rl.sc, 'Relative') + vBar(1356, 160, 135, rl.cons, 'Consistency') + tx(1322, 330, 'Rotation', { s: 10, a: 'middle' });
+  s += tx(765, 410, 'Rotation rel to path', { s: 18 }) + slider(935, 392, 300, PD.rotRel, rl.vals) + tx(1265, 410, fdir(rl.m, 'opening', 'closing'), { s: 18 }) + tx(765, 424, '(Inside of impact zone)', { s: 9, f: '#1a1aa6' });
+  // symétrie & fluidité
+  s += panel(731, 441, 349, 351, 'Rot. symmetry', { val: Math.abs(sy.m).toFixed(1) + '°', unit: sy.m >= 0 ? 'pull' : 'push', flag: sy.cons }) + tx(905, 505, 'Impact zone', { s: 22, a: 'middle' }) + ln(905, 520, 905, 700, { s: '#aaa', sw: 2, d: '8 5' });
+  s += putTop(820, 620, -m('yImp') - 2, .42) + putTop(985, 620, -m('yImp') + 1, .42) + arrow(975, 600, 925, 600, '#1a1aa6', 3) + arrow(880, 600, 840, 600, '#1a1aa6', 3);
+  s += tx(905, 712, Math.abs(sy.m) < 0.3 ? 'symmetric' : Math.abs(sy.m) < 1.5 ? (sy.m >= 0 ? 'slight pull' : 'slight push') : (sy.m >= 0 ? 'pull' : 'push'), { s: 22, f: '#1a1aa6', a: 'middle' }) + consBar(811, 752, 190, sy.cons);
+  s += panel(1085, 441, 349, 351, 'Smoothness', { val: Math.round(ac.m) + '', unit: '°/s²', flag: ac.cons }) + ln(1175, 612, 1405, 612, { sw: 1.4 }) + ln(1175, 500, 1175, 690, { sw: 1.2 }) + tx(1152, 600, 'Rotation acceleration', { s: 10, a: 'middle', r: -90 });
+  shots.forEach((sh, i) => { s += pls(sh.yacc.filter(p => p[0] > 150 && p[0] < 700).map(p => [1180 + (p[0] - 150) * .4, 612 - Math.max(-1800, Math.min(1800, p[1])) * .045]), { s: RP_COL[i], sw: 1.3 }); });
+  s += tx(1260, 712, ac.m < 800 ? 'normal' : 'jerky', { s: 22, f: '#1a1aa6', a: 'middle' }) + consBar(1165, 752, 190, ac.cons);
+  return s;
+}
+function pgLaunch(A) {
+  const ri = A.rise, h = A.height, sh_ = A.shaft, la = A.loftA, li = A.loftI, lc = A.launch;
+  let s = pageHead('Launch') + panel(22, 88, 703, 349, 'Putter Path - Side view') + panel(22, 441, 703, 351, 'Launch');
+  shots.forEach((sh, i) => { const y0 = 195 + i * 28; s += ln(235, y0, 468, y0, { s: '#555', sw: .8, d: '3 3' }) + pls(sh.side.filter(q => q[0] > -400 && q[0] < 200).map(q => [372 - q[0] * .35, y0 - q[1] * 1.6]), { s: RP_COL[i], sw: 1.7 }) + rc(369, y0 - 3, 6, 6, { f: '#000' }); });
+  s += rc(22, 126, 52, 52, { f: '#ffffd0', s: '#999' }) + vBar(583, 175, 130, ri.sc, 'Rise angle') + vBar(649, 175, 130, ri.cons, 'Consistency') + tx(372, 362, 'Rise: ' + fdir(ri.m, 'up', 'down'), { s: 20, a: 'middle' }) + ln(22, 374, 725, 374, { sw: 1 });
+  s += tx(56, 408, 'Rise angle', { s: 18 }) + slider(222, 390, 322, PD.rise, ri.vals) + tx(572, 408, Math.abs(ri.m).toFixed(1) + ' ° ' + (ri.m >= 0 ? 'upward' : 'downward'), { s: 18 });
+  // vue de côté : putter + balle + flèches
+  const cx = 420, gy = 740;
+  s += rc(130, gy, 505, 9, { f: '#238a1f' }) + ballSvg(cx - 60, gy - 40, 38) + `<g transform="translate(${cx} ${gy}) rotate(${-lc.m * 0})"><path d="M-2,0 L70,0 L85,-18 L50,-24 L-2,-24 Z" fill="url(#gBladeV)" stroke="#666" stroke-width="2"/><rect x="-8" y="-150" width="18" height="150" fill="url(#gBlade)" stroke="#666" stroke-width="1.6"/><rect x="-5" y="-250" width="12" height="100" fill="#cfd3d6" stroke="#666" stroke-width="1.4"/></g>`;
+  s += ln(cx - 4, gy - 4, cx - 4 - Math.tan(li.m / DEG) * 120, gy - 124, { s: '#17a2a2', sw: 1.6 }) + ln(cx - 14, gy - 255, cx - 14 + sh_.m * 2.2, gy, { s: '#d33', sw: 1.4 });
+  s += arrow(cx - 105, gy - 40, 150, gy - 40 - Math.tan(lc.m / DEG) * 255, '#1a1aa6', 3) + arrow(600, gy - 40 + Math.tan(ri.m / DEG) * 130, cx + 70, gy - 40, '#a020a0', 3);
+  s += tx(190, gy - 100, 'Pred. Launch:', { s: 17, f: '#1a1aa6', a: 'middle' }) + tx(190, gy - 80, fdir(lc.m, 'up', 'down'), { s: 17, f: '#1a1aa6', a: 'middle' }) + tx(580, gy - 130, 'Rise angle:', { s: 17, f: '#a020a0', a: 'middle' }) + tx(580, gy - 110, fdir(ri.m, 'up', 'down'), { s: 17, f: '#a020a0', a: 'middle' });
+  s += tx(cx - 10, 782, 'Pred. Spin: ' + (shots[shots.length - 1].spinBack ? 'back' : 'top'), { s: 14, a: 'middle' }) + rc(100, 482, 150, 78, { f: '#fff', s: '#000' }) + tx(108, 502, 'Shaft: ' + Math.abs(sh_.m).toFixed(1) + '° ' + (sh_.m >= 0 ? 'addloft' : 'deloft'), { s: 14, f: '#c00' }) + tx(108, 522, 'Eff. Loft: ' + li.m.toFixed(1) + '° pos.', { s: 14, f: '#17a2a2' }) + tx(108, 544, '( Putter Loft: ' + params.loft.toFixed(1) + ' ° )', { s: 12 });
+  // panneaux de droite
+  const side = (cx0, cy0, ang, k) => ballSvg(cx0 - 70 * k, cy0 - 38 * k, 36 * k) + `<g transform="translate(${cx0} ${cy0})"><path d="M-2,0 L${70 * k},0 L${84 * k},${-18 * k} L${50 * k},${-24 * k} L-2,${-24 * k} Z" fill="url(#gBladeV)" stroke="#666" stroke-width="2"/><rect x="${-8 * k}" y="${-105 * k}" width="${18 * k}" height="${105 * k}" fill="url(#gBlade)" stroke="#666" stroke-width="1.6"/></g>` + ln(cx0 - Math.tan(ang / DEG) * 90, cy0 - 90, cx0, cy0, { s: '#17a2a2', sw: 1.6 });
+  s += panel(731, 88, 349, 349, 'Height at impact', { val: h.m.toFixed(1), unit: 'mm', flag: h.cons == null ? null : 100 - Math.min(100, Math.abs(h.m - 3) * 10) }) + rc(765, 330, 280, 4, { f: '#238a1f' }) + side(940, 330, li.m, 1.15) + ln(765, 292, 1040, 292, { s: '#555', sw: 1, d: '4 3' }) + consBar(811, 396, 190, h.cons);
+  s += panel(1085, 88, 349, 349, 'Shaft Impact', { val: Math.abs(sh_.m).toFixed(1) + '°', unit: sh_.m >= 0 ? 'add' : 'less', flag: sh_.cons }) + ln(1260, 150, 1260 + sh_.m * 2.2, 275, { s: '#222', sw: 1.6 }) + ln(1260, 150, 1260, 275, { s: '#d33', sw: 1, d: '3 3' }) + rc(1140, 277, 240, 4, { f: '#238a1f' }) + cir(1260, 275, 5, { f: '#999' }) + consBar(1165, 396, 190, sh_.cons);
+  s += panel(731, 441, 349, 351, 'Loft Address', { val: la.m.toFixed(1) + ' °', unit: 'up', flag: la.cons }) + rc(765, 700, 280, 4, { f: '#238a1f' }) + side(960, 700, la.m, .95) + consBar(811, 752, 190, la.cons);
+  s += panel(1085, 441, 349, 351, 'Loft Impact', { val: li.m.toFixed(1) + ' °', unit: 'up', flag: li.cons }) + rc(1120, 700, 280, 4, { f: '#238a1f' }) + side(1315, 700, li.m, .95) + consBar(1165, 752, 190, li.cons);
+  return s;
+}
+function pgDynamics(A) {
+  const bt = A.backT, ft = A.fwdT, sp = A.spd, rh = A.rhythm, it = A.impTim, n = shots.length;
+  let s = pageHead('Dynamics') + panel(22, 88, 703, 705, 'Stroke Dynamics');
+  const mini = (x, y, w, h, xmax, ymin, ymax, ticksY, ticksX, get, ylab, imp) => {
+    const Y = v => y + (ymax - v) / (ymax - ymin) * h, X = t => x + t / xmax * w;
+    let c = ln(x, y, x, y + h, { sw: 1.3 }) + ln(x, Y(0), x + w, Y(0), { sw: ymin < 0 ? 2 : 1.3 });
+    ticksY.forEach(t => { c += ln(x - 3, Y(t), x, Y(t)) + tx(x - 5, Y(t) + 3, String(t), { s: 8, a: 'end' }); });
+    ticksX.forEach(t => { c += tx(X(t), Y(ymin < 0 ? ymin : 0) + 12, String(t), { s: 8, a: 'middle' }); });
+    shots.forEach((sh, i) => { c += pls(get(sh).filter(p => p[0] >= 0 && p[0] <= xmax).map(p => [X(p[0]), Y(Math.max(ymin, Math.min(ymax, p[1])))]), { s: RP_COL[i], sw: 1.4 }); });
+    if (imp) { const ti = rmean(shots.map(q => q.impT)); c += ln(X(ti) - 3, y + h * .1, X(ti) - 3, y + h * .3) + ln(X(ti) + 3, y + h * .1, X(ti) + 3, y + h * .3); }
+    return c + tx(x - 32, y + h / 2, ylab, { s: 9, a: 'middle', r: -90 });
+  };
+  s += tx(168, 163, '-backswing-', { s: 14, a: 'middle' }) + tx(430, 163, '-forward swing-', { s: 14, a: 'middle' });
+  s += mini(100, 222, 168, 128, 900, 0, 2500, [0, 625, 1250, 1875, 2500], [0, 225, 450, 675, 900], sh => sh.sp.b, 'Speed [mm/s]') + mini(352, 222, 215, 128, 1200, 0, 2500, [0, 625, 1250, 1875, 2500], [0, 300, 600, 900, 1200], sh => sh.sp.f, 'Speed [mm/s]', true);
+  s += mini(100, 438, 168, 112, 900, -10000, 10000, [-10000, -5000, 0, 5000, 10000], [], sh => sh.sp.ab, 'Acceleration [mm/s2]') + mini(352, 438, 215, 112, 1200, -10000, 10000, [-10000, -5000, 0, 5000, 10000], [], sh => sh.sp.af, 'Acceleration [mm/s2]', true);
+  s += vBar(642, 205, 160, A.spd.cons, 'Speed') + tx(642 + 14, 399, 'Consistency', { s: 12, a: 'middle' });
+  s += srow(47, 215, 346, 588, 622, 'Back swing time', PD.backT, bt.vals, Math.round(bt.m) + ' ms') + srow(47, 215, 346, 588, 678, 'Forward swing time', PD.fwdT, ft.vals, Math.round(ft.m) + ' ms') + srow(47, 215, 346, 588, 734, 'Speed at impact', PD.spd, sp.vals, Math.round(sp.m) + ' mm/s');
+  const gt = (v, d) => (v - d.min) / (d.max - d.min);
+  s += panel(731, 88, 349, 349, 'Backswing time', { val: Math.round(bt.m) + '', unit: 'ms', flag: bt.cons }) + gauge(905, 258, 105, gt(bt.m, PD.backT)) + consBar(811, 396, 190, bt.cons);
+  s += panel(1085, 88, 349, 349, 'Fwd swing time', { val: Math.round(ft.m) + '', unit: 'ms', flag: ft.cons }) + gauge(1260, 258, 105, gt(ft.m, PD.fwdT)) + consBar(1165, 396, 190, ft.cons);
+  const bars = (x0, items) => items.map(([v, lab, band], k) => {
+    const bx = x0 + 34 + k * 165, y2 = t => 716 - Math.min(t, 1200) / 1200 * 186;
+    let c = tx(bx + 55, 520, lab, { s: 15, a: 'middle' }) + rc(bx, 530, 110, 186, { f: '#fff', s: '#555' }) + rc(bx, y2(band[1]), 110, y2(band[0]) - y2(band[1]), { f: '#c4c4c4' })
+      + `<rect x="${bx + 18}" y="${y2(v)}" width="74" height="${716 - y2(v)}" fill="#0a8fc4" stroke="#444"/>` + ln(bx + 18, y2(v), bx + 92, y2(v), { s: '#333', sw: 2 });
+    [0, 200, 400, 600, 800, 1000, 1200].forEach(t => { c += tx(bx - 3, y2(t) + 3, String(t), { s: 8, a: 'end' }); });
+    return c;
+  }).join('');
+  const impM = rmean(shots.map(q => q.impT));
+  s += panel(731, 441, 349, 351, 'Backswing rhythm', { val: rh.m.toFixed(2), unit: '', flag: rh.cons }) + bars(731, [[bt.m, 'Backswing', [580, 760]], [impM, 'Impact', [280, 350]]]) + consBar(811, 752, 190, rh.cons);
+  s += panel(1085, 441, 349, 351, 'Impact timing', { val: it.m.toFixed(3), unit: '', flag: it.cons }) + bars(1085, [[impM, 'Impact', [280, 350]], [ft.m, 'Fwd swing', [720, 910]]]) + consBar(1165, 752, 190, it.cons);
+  return s;
+}
+
+/* ── affichage ── */
+function rpRender() {
+  const svg = $('rpsvg'), A = shots.length ? rpAgg() : null;
+  const fn = [pgCover, pgAim, pgDirection, pgPath, pgRotation, pgLaunch, pgDynamics][rpPage];
+  let body;
+  try { body = A ? fn(A) : (rpPage === 0 ? pgCover(null) : pageHead(RP_PAGES[rpPage]) + noData()); } catch (e) { body = tx(40, 100, 'Report error: ' + e.message, { s: 20, f: '#c00' }); console.error(e); }
+  svg.innerHTML = RP_DEFS + `<g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">${body}</g>`;
+  $('rptitle').textContent = `${rpPage + 1}/7 · ${RP_PAGES[rpPage]}`;
+  document.querySelectorAll('#rptabs button').forEach((b, i) => b.classList.toggle('on', i === rpPage));
+}
+function openReport(p) { if (p != null) rpPage = p; $('report').hidden = false; rpN = shots.length; rpRender(); }
+function closeReport() { $('report').hidden = true; }
+{
+  const tabs = $('rptabs'); RP_PAGES.forEach((n, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = n; b.addEventListener('click', () => { rpPage = i; rpRender(); }); tabs.appendChild(b); });
+  $('reportbtn').addEventListener('click', () => openReport());
+  $('rpclose').addEventListener('click', closeReport);
+  $('rpprev').addEventListener('click', () => { rpPage = (rpPage + 6) % 7; rpRender(); });
+  $('rpnext').addEventListener('click', () => { rpPage = (rpPage + 1) % 7; rpRender(); });
+  $('rpprint').addEventListener('click', () => window.print());
+  addEventListener('keydown', e => { if ($('report').hidden) return; if (e.key === 'Escape') closeReport(); else if (e.key === 'ArrowRight') { rpPage = (rpPage + 1) % 7; rpRender(); } else if (e.key === 'ArrowLeft') { rpPage = (rpPage + 6) % 7; rpRender(); } });
+}
+
 /* ───────────── boucle ───────────── */
 const H_STEP = 0.0004;
 let last = performance.now();
@@ -1322,6 +1720,8 @@ function render(dt) {
   // HUD
   const sp = Math.hypot(S.v.x, S.v.z);
   updateReplayBtns();
+  if (S.hit && S.cs === 2 && !S.shotDone && S.imp && S.t > S.tHit + 0.12 && (Math.abs(S.headV) < 0.03 || S.t > S.tHit + 1.5)) captureShot();   // fin du coup → alimente le rapport
+  { const rb = $('reportbtn'), none = shots.length === 0; if (rb.disabled !== none) rb.disabled = none; if (!$('report').hidden && shots.length !== rpN) { rpN = shots.length; rpRender(); } }
   hud.innerHTML = `<div><b>${sp.toFixed(2)}</b><span>m/s balle</span></div>` +
     `<div><b>${(S.hit ? S.b.x : 0).toFixed(2)}</b><span>m parcourus</span></div>` +
     `<div><b>${Math.round(S.w.length() * 60 / (2 * Math.PI))}</b><span>tr/min</span></div>` +
@@ -1353,6 +1753,21 @@ if (qs.has('demo')) {   // test : geste synthétique (recul 0,6 s, descente ~0,3
   pad.raw = { t: ts, x: xs, y: ys }; if (processStroke()) { S.traj = pad.traj; reset(); }
   if (qs.has('edit')) { const [lg, i, d] = qs.get('edit').split(':'); editSel = { leg: lg, i: +i }; editSet(lg, +i, editVals(pad.edit, lg)[+i] + parseFloat(d)); reset(); }
 }
+if (qs.has('multi')) {   // test : 5 gestes synthétiques légèrement différents → rapport complet
+  const e5 = u => u * u * u * (10 - 15 * u + 6 * u * u);
+  for (let q = 0; q < 5; q++) {
+    const r = rng(40 + q), g = padGeom(), sm = pad.s_mm / 1000, ts = [], xs = [], ys = [];
+    const back = 0.19 + 0.03 * r(), acc = 4.8 + 1.2 * r(), tb = 0.56 + 0.08 * r(), drift = (r() - 0.5) * 0.03;
+    for (let tt = 0; tt < 1.3; tt += 0.008) {
+      let X; if (tt < tb) X = -back * e5(tt / tb); else if (tt < tb + 0.06) X = -back; else { const d = tt - tb - 0.06; X = -back + 0.5 * acc * d * d - (d > 0.32 ? 0.5 * 9 * (d - 0.32) * (d - 0.32) : 0); }
+      const Z = 0.004 * Math.sin(tt * 6.2 + q) + drift * Math.max(0, tt - tb - 0.06) + (r() - 0.5) * 0.0006;
+      ts.push(1000 + tt * 1000); xs.push(g.mx + X / sm); ys.push(g.my + Z / sm);
+    }
+    pad.raw = { t: ts, x: xs, y: ys };
+    if (processStroke()) { S.traj = pad.traj; reset(); let n = Math.round(3.2 / H_STEP); while (n-- > 0) stepPhysics(H_STEP); captureShot(); }
+  }
+}
+if (qs.has('report')) openReport(parseInt(qs.get('report'), 10) || 0);
 if (debugT !== null) {   // mode capture : avance la simulation jusqu'à t puis fige
   let n = Math.round(debugT / H_STEP); while (n-- > 0) stepPhysics(H_STEP);
 }
