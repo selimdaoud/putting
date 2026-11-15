@@ -928,7 +928,12 @@ function finishTraj(tx, tz, tvx, tvz, nReal) {
   const topOf = (X) => { let k0 = 0, m = 1e9, M = -1e9; for (let k = 0; k < X.length; k++) { if (X[k] < m) { m = X[k]; k0 = k; } if (X[k] > M) M = X[k]; } return [k0, M - m]; };
   const [cTop, cSpan] = topOf(tx);
   if (cSpan < 0.05) return null;                                 // geste trop court pour un putt
-  let cImp = n - 1; for (let k = cTop; k < n; k++) if (tx[k] >= -0.0004) { cImp = k; break; }
+  let cImp = n - 1, crossed = false; for (let k = cTop; k < n; k++) if (tx[k] >= -0.0004) { cImp = k; crossed = true; break; }
+  // coup non valide : la tête doit venir de la gauche (recul, puis frappe vers la cible) ; aucun passage sur la balle avant le recul, et une frappe après le sommet
+  finishTraj.why = '';
+  for (let k = 0; k < cTop; k++) if (tx[k] >= 0.012 && Math.abs(tz[k]) < 0.04) { finishTraj.why = 'tête passée sur la balle avant le recul'; break; }
+  if (!finishTraj.why && !crossed) finishTraj.why = 'mauvais sens (reculez à gauche, frappez vers la droite)';
+  if (finishTraj.why) return null;
   // --- tête : masse tirée vers la position dessinée par un ressort-amortisseur (impédance de la prise et du bras, ζ = 0,8) : k = M·ωn², b = 2ζ·M·ωn.
   //     À vitesse v la tête traîne de v·τ avec τ = 2ζ/ωn.
   //     La tête a donc de l'inertie : elle retarde sur la main à l'accélération, dépasse un peu au changement de sens, et continue après l'arrêt.
@@ -1071,7 +1076,7 @@ function processStroke() {
   const r = pad.raw; if (!r || r.t.length < 6) { pad.hint = 'Tracé trop court.'; return false; }
   const g = padGeom(), sm = pad.s_mm / 1000, t0 = r.t[0];
   const tr = buildTraj(r.t.map(t => (t - t0) / 1000), r.x.map(x => (x - g.mx) * sm), r.y.map(y => (y - g.my) * sm));
-  if (!tr) { pad.hint = 'Geste trop court : reculez puis frappez avec plus d\'amplitude.'; return false; }
+  if (!tr) { pad.hint = finishTraj.why ? 'Coup non valide : ' + finishTraj.why + '.' : 'Geste trop court : reculez puis frappez avec plus d\'amplitude.'; return false; }
   pad.traj = tr; S.traj = tr; pad.edit = makeEdit(tr); editSel = null; editHover = null; pad.hint = ''; pad.pl = plausibility(tr); pad.bub = { x: 0, y: 0, vx: 0, vy: 0 }; return true;
 }
 function playDrawn() { S.imp = null; reset(); }
