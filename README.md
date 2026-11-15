@@ -1,4 +1,4 @@
-# Putting – simulateur de coup de putter
+# Precision Putting
 
 ![Photo de référence](docs/reference.png)
 *Photo de référence : impact du putter au ralenti, que la simulation recrée.*
