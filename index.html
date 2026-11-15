@@ -27,7 +27,18 @@
   @keyframes spIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
   @keyframes spPulse{50%{opacity:.65}}
   @media (prefers-reduced-motion:reduce){#splash .sp-card,#splash .sp-go{animation:none}}
-  #hidebtn{position:fixed;right:16px;top:10px;width:auto;margin:0;padding:6px 14px;border-radius:999px;background:rgba(10,18,8,.55);color:#e8efdf;font-weight:500;font-size:12px;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:9}
+  #hidebtn,#topbar button{width:auto;margin:0;padding:6px 14px;border-radius:999px;background:rgba(10,18,8,.55);color:#e8efdf;font-weight:500;font-size:12px;border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
+  #hidebtn:hover,#topbar button:hover{background:rgba(40,60,28,.7)}
+  #topbar{position:fixed;left:16px;top:10px;display:flex;gap:8px;z-index:9}
+  #about{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(4,8,3,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #about[hidden]{display:none}
+  #about .ab-card{width:min(460px,100%);max-height:100%;overflow:auto;padding:22px 24px;border-radius:16px;background:rgba(14,24,10,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(0,0,0,.6)}
+  #about h2{margin:0;font:500 24px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#fff}
+  #about h3{margin:16px 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#bfe08a}
+  #about .ab-sub{margin:2px 0 0;opacity:.7}
+  #about ul{margin:0;padding-left:18px;line-height:1.7}
+  #about p{margin:0;line-height:1.55;opacity:.85}
+  #aboutx{margin-top:18px}
   #panel{position:fixed;left:16px;bottom:16px;width:260px;padding:14px 16px;border-radius:14px;
     background:rgba(10,18,8,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     border:1px solid rgba(255,255,255,.08)}
@@ -45,7 +56,7 @@
   button{margin-top:8px;width:100%;padding:8px;border:0;border-radius:9px;background:#a8d65a;color:#12200a;
     font-weight:600;cursor:pointer}
   button:hover{background:#c0ea74}
-  #hud{position:fixed;right:18px;top:58px;text-align:right;font-variant-numeric:tabular-nums;
+  #hud{position:fixed;right:18px;top:16px;text-align:right;font-variant-numeric:tabular-nums;
     text-shadow:0 1px 8px rgba(0,0,0,.6);line-height:1.6}
   #hud b{font-size:22px;font-weight:500;color:#fff}
   #hud span{opacity:.65;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-left:6px}
@@ -62,10 +73,11 @@
   #chartmin{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;margin:0;padding:0;border-radius:6px;
     background:rgba(255,255,255,.22);color:#fff;font:600 22px/1 Helvetica,Arial,sans-serif}
   #chartmin:hover,#chartclear:hover{background:rgba(255,255,255,.4)}
+  #chart{touch-action:none}
   #chartclear{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:auto;height:30px;margin:0;padding:0 12px;border-radius:6px;background:rgba(255,255,255,.22);color:#fff;font:500 15px/1 Helvetica,Arial,sans-serif}
   #chartbox.min #chart{display:none}
   #chart{width:100%;height:270px;display:block;cursor:default}
-  #pad{z-index:5;position:fixed;left:16px;top:44px;width:min(584px,calc(100vw - 32px));border-radius:12px;overflow:hidden;color:#e8efdf;
+  #pad{z-index:5;position:fixed;left:16px;top:56px;width:min(584px,calc(100vw - 32px));border-radius:12px;overflow:hidden;color:#e8efdf;
     background:rgba(10,18,8,.80);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.1)}
   #pad[hidden]{display:none}
   #pad h2{margin:0;padding:8px 12px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:#bfe08a;
@@ -103,7 +115,7 @@
     #panelmin{width:38px;height:38px}
     #chartclear{height:40px;padding:0 16px}
     #pad h2 button{width:38px;height:38px}
-    #hidebtn{min-height:38px}
+    #hidebtn,#topbar button{min-height:38px}
   }
   @media (max-width:640px){#panel{width:auto;right:12px;left:12px;bottom:12px}}
 </style>
@@ -119,12 +131,29 @@
     <div class="sp-go">Touchez l'écran ou appuyez sur une touche pour commencer</div>
   </div>
 </div>
-<button id="hidebtn" type="button">Masquer l'interface</button>
-<div id="hint">Glisser : orbiter · Molette : zoom · Espace : rejouer · H : masquer l'interface</div>
+<div id="topbar"><button id="aboutbtn" type="button">About</button><button id="drawbtn" type="button">Putting Stroke</button><button id="hidebtn" type="button">Hide Menu</button></div>
+<div id="about" hidden role="dialog" aria-modal="true" aria-label="À propos">
+  <div class="ab-card">
+    <h2>Precision Putting</h2>
+    <p class="ab-sub">Simulateur de coup de putter · physique réaliste</p>
+    <h3>Commandes</h3>
+    <ul>
+      <li><b>Glisser</b> : orbiter la caméra</li>
+      <li><b>Molette</b> ou <b>pincer</b> (tactile) : zoom</li>
+      <li><b>Espace</b> ou <b>R</b> : rejouer le swing</li>
+      <li><b>H</b> ou « Hide Menu » : cacher / afficher les menus</li>
+      <li><b>Putting Stroke</b> : ouvre la fenêtre de dessin (vue de dessus) pour tracer votre propre geste</li>
+      <li><b>Stroke Dynamics</b> (après un tracé) : glissez les points de la courbe en pointillés pour changer la vitesse (<b>Maj</b> = pas fin, <b>↑ ↓</b> = ±10 mm/s, <b>double clic</b> = valeur d'origine)</li>
+    </ul>
+    <h3>Crédits</h3>
+    <p>Son d'impact : « putt.wav » par 170129 (Freesound n° 408260, licence CC0). Rendu : three.js r128.</p>
+    <button id="aboutx" type="button">Fermer</button>
+  </div>
+</div>
 <div id="hud"></div>
 <div id="chartbox"><h2><button id="chartclear" title="Effacer les courbes" aria-label="Effacer">Clear</button><span>Stroke Dynamics</span><button id="chartmin" title="Réduire / agrandir" aria-label="Réduire">–</button></h2><canvas id="chart"></canvas></div>
 <div id="pad" hidden>
-  <h2><span>Dessiner le swing · vue de dessus</span><span class="btns"><button id="padmin" aria-label="Réduire">–</button><button id="padclose" aria-label="Fermer">×</button></span></h2>
+  <h2><span>Putting Stroke</span><span class="btns"><button id="padmin" aria-label="Réduire">–</button><button id="padclose" aria-label="Fermer">×</button></span></h2>
   <div id="padbody">
     <canvas id="padc"></canvas>
     <div class="padmid">
@@ -135,12 +164,12 @@
       </div>
       <div id="plaus" hidden><canvas id="plausc"></canvas><div id="plausTxt"></div></div>
     </div>
-    <div class="padbtns"><button id="padreplay">Rejouer mon swing</button><button id="padauto" class="ghost">Swing automatique</button></div>
+    <div class="padbtns"><button id="padreplay">Replay</button><button id="padauto" class="ghost">Swing automatique</button></div>
     <div id="padstats"></div>
   </div>
 </div>
 <div id="panel">
-  <h1><span>Putt · physique réaliste</span><button id="panelmin" type="button" title="Réduire / agrandir" aria-label="Réduire">–</button></h1>
+  <h1><span>Paramètres</span><button id="panelmin" type="button" title="Réduire / agrandir" aria-label="Réduire">–</button></h1>
   <div class="row"><label>Ralenti</label><input id="slow" type="range" min="0.02" max="1" step="0.01" value="1"><output></output></div>
   <div class="row"><label>Distance putt</label><input id="dist" type="range" min="0.5" max="12" step="0.1" value="4"><output></output></div>
   <div class="row"><label>Loft (°)</label><input id="loft" type="range" min="-4" max="8" step="0.5" value="3"><output></output></div>
@@ -153,8 +182,7 @@
   <label class="chk"><input id="lite" type="checkbox"> Mode léger (plus fluide)</label>
   <label class="chk"><input id="line" type="checkbox" checked> Ligne de putt idéale</label>
   <label class="chk"><input id="loop" type="checkbox"> Rejouer en boucle</label>
-  <button id="drawbtn" class="ghostbtn" style="background:rgba(255,255,255,.14);color:#e8efdf">✎ Dessiner mon swing</button>
-  <button id="replay">Rejouer</button>
+  <button id="replay">Replay</button>
 </div>
 
 <script src="three.min.js"></script>
@@ -189,7 +217,7 @@ const LIE = 70 * Math.PI / 180, LEAN = 3 * Math.PI / 180;   // lie 70°, manche 
 
 const qs0 = new URLSearchParams(location.search);
 let lite = qs0.has('lite') ? qs0.get('lite') !== '0' : (navigator.maxTouchPoints > 1 && /Macintosh|iPad|iPhone/.test(navigator.userAgent));
-let grassGeo = null;
+let grassGeo = null, userPaused = false;
 const params = { slow: 1, dist: 4, vp: 1.35, loft: 3.0, psi0: 0, stimp: 10, blur: 1, ramp: true, loop: false, line: true, inert: 35 };
 const qs = new URLSearchParams(location.search);
 const debugT = qs.has('t') ? parseFloat(qs.get('t')) : null;
@@ -457,7 +485,7 @@ function newTrial() {
   S.cur = { back: [], fwd: [], imp: null, color: TRIAL_COLORS[trialCount++ % 5] };
 }
 function reset() {
-  updateLine();
+  userPaused = false; updateLine();
   S.t = 0; S.thd = 0; S.fwd = false; S.fa = 25; S.lastSample = -1; S.tStop = -1; newTrial();
   S.thA = THETA_I - 0.0065;                        // adresse : face ≈ 8 mm derrière la balle
   S.Tb = T_BACK; S.T0 = S.Tb + 0.06;                  // arrière-swing 0,55 s + transition 0,06 s
@@ -795,12 +823,28 @@ document.querySelectorAll('#camseg button').forEach(b => { const on = b.dataset.
   pn.querySelector('h1').addEventListener('click', () => apply(!pn.classList.contains('min')));
 }
 let uiHidden = false;
-function toggleUI() { uiHidden = !uiHidden; for (const id of ['panel', 'hint', 'chartbox', 'pad']) $(id).style.display = uiHidden ? 'none' : ''; $('hidebtn').textContent = uiHidden ? 'Afficher l\'interface' : 'Masquer l\'interface'; }
+function toggleUI() { uiHidden = !uiHidden; for (const id of ['panel', 'chartbox', 'pad']) $(id).style.display = uiHidden ? 'none' : '';
+  for (const id of ['drawbtn', 'aboutbtn']) $(id).style.visibility = uiHidden ? 'hidden' : '';   // invisibles mais gardent leur place : « Show Menu » reste où est « Hide Menu »
+  $('hidebtn').textContent = uiHidden ? 'Show Menu' : 'Hide Menu'; }
 $('hidebtn').addEventListener('click', toggleUI);
-if (matchMedia('(pointer:coarse)').matches) $('hint').textContent = 'Glisser : orbiter · Pincer : zoom';
-else if (innerWidth < 1250) $('hint').textContent = 'Glisser : orbiter · Molette : zoom';
+{ const ab = $('about'), toggleAbout = v => { ab.hidden = !v; };
+  $('aboutbtn').addEventListener('click', () => toggleAbout(true)); $('aboutx').addEventListener('click', () => toggleAbout(false));
+  ab.addEventListener('click', e => { if (e.target === ab) toggleAbout(false); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') toggleAbout(false); });
+}
 const replay = () => { trials.length = 0; S.cur = null; reset(); };   // rejeu manuel : efface le diagramme
-$('replay').addEventListener('click', replay);
+// Replay ⇄ Pause : pendant la séquence le bouton devient « ❚❚ Pause » ; en pause, « ▶ Resume » ; séquence terminée, « Replay »
+const running = () => !S.stopped;
+function replayBtn(fromPad) {
+  if (userPaused) { userPaused = false; return; }                 // reprise
+  if (running()) { userPaused = true; return; }                   // pause
+  if (fromPad && S.traj) { trials.length = 0; S.cur = null; playDrawn(); } else replay();
+}
+$('replay').addEventListener('click', () => replayBtn(false));
+function updateReplayBtns() {
+  const lab = userPaused ? '▶ Resume' : running() ? '❚❚ Pause' : 'Replay';
+  for (const id of ['replay', 'padreplay']) { const b = $(id); if (b.textContent !== lab) b.textContent = lab; }
+}
 addEventListener('keydown', e => {
   if (e.code === 'Space' || e.key === 'r') { e.preventDefault(); replay(); }
   if (e.key === 'h') toggleUI();
@@ -849,6 +893,11 @@ function buildTraj(ts0, X0, Z0) {
   for (let k = 0; k < N0 - k0; k++) { tx[k] = xs[k + k0]; tz[k] = zs[k + k0]; tvx[k] = vx[k + k0]; tvz[k] = vz[k + k0]; }
   { let ex = tx[N0 - k0 - 1], ez = tz[N0 - k0 - 1]; const ux = tvx[N0 - k0 - 1], uz = tvz[N0 - k0 - 1];
     for (let j = 1; j <= 150; j++) { const f = 1 - j / 150, k = N0 - k0 - 1 + j; ex += ux * f * 0.001; ez += uz * f * 0.001; tx[k] = ex; tz[k] = ez; tvx[k] = ux * f; tvz[k] = uz * f; } }
+  return finishTraj(tx, tz, tvx, tvz, nReal);
+}
+// à partir de la commande de la main (1 kHz) : sommet, impact, réponse inertielle de la tête, direction du chemin
+function finishTraj(tx, tz, tvx, tvz, nReal) {
+  const n = tx.length;
   // --- commande (la main) : sommet du recul et instant d'impact
   const topOf = (X) => { let k0 = 0, m = 1e9, M = -1e9; for (let k = 0; k < X.length; k++) { if (X[k] < m) { m = X[k]; k0 = k; } if (X[k] > M) M = X[k]; } return [k0, M - m]; };
   const [cTop, cSpan] = topOf(tx);
@@ -887,7 +936,7 @@ function buildTraj(ts0, X0, Z0) {
   const phi = new Float32Array(N); let pf = 0;
   for (let k = 0; k < N; k++) { const sp = Math.hypot(hvx[k], hvz[k]); if (sp > 0.08) { const raw = hvx[k] >= 0 ? Math.atan2(hvz[k], hvx[k]) : Math.atan2(-hvz[k], -hvx[k]); pf += (raw - pf) * (1 - Math.exp(-0.001 / 0.03)); } phi[k] = Math.max(-0.35, Math.min(0.35, pf)); }
   const kc = Math.min(kImp, n - 1);
-  return { n: N, cn: n, kImp, xs: hx, zs: hz, vx: hvx, vz: hvz, phi, tTop: kTop / 1000, tEnd: (N - 1) / 1000,
+  return { n: N, cn: n, nReal, kImp, xs: hx, zs: hz, vx: hvx, vz: hvz, phi, tTop: kTop / 1000, tEnd: (N - 1) / 1000,
     cx: tx, cz: tz, cvx: tvx, cvz: tvz, cTop, cImp, lag: Math.hypot(tx[kc] - hx[kImp], tz[kc] - hz[kImp]), aHead: accPeak(hvx, hvz, kTop, kImp, N) };
 }
 function accPeak(vx, vz, k0, k1, n) {                              // accélération maximale du chemin (différence centrée sur 40 ms)
@@ -904,12 +953,100 @@ function plausibility(tr) {
   const sp = k => Math.hypot(tr.cvx[k], tr.cvz[k]), k0 = tr.cTop, k1 = Math.max(k0 + 1, tr.cImp), aPk = accPeak(tr.cvx, tr.cvz, k0, k1, tr.cn);
   return plausScore(aPk, sp(k1), Math.max(0.05, k0 / 1000 - 0.12), Math.max(0.05, (k1 - k0) / 1000));
 }
+/* ───────────── édition de la courbe de vitesse (Stroke Dynamics ↔ tracé) ─────────────
+   La courbe en pointillés = vitesse de la main le long de l'axe de visée, avec un point toutes les 50 ms (comme les points blancs du tracé).
+   Glisser un point change sa vitesse ; la forme du chemin est conservée, seule la façon de le parcourir change. */
+const EDIT_DT = 50, V_EDIT_MAX = 6;
+let editDrag = null, editHover = null, editSel = null, editTimer = 0, chartYmax = 2500; const chartGeo = {};
+const chartEl = document.getElementById('chart');
+const editOn = () => !!(S.traj && pad.traj === S.traj && pad.edit);
+function makeEdit(tr) {
+  const top = tr.cTop, cn = tr.cn, mk = (a, b) => { const t = []; for (let k = a; k < b; k += EDIT_DT) t.push(k); t.push(b); return t; };
+  const bt = mk(0, top), ft = mk(top, cn - 1);
+  const bv = bt.map(k => Math.max(0, -tr.cvx[k])), fv = ft.map(k => Math.max(0, tr.cvx[k]));
+  return { tr0: tr, top, cn, nReal: tr.nReal, bt, ft, bv, fv, bv0: bv.slice(), fv0: fv.slice() };
+}
+const editPinned = (leg, i, ed) => leg === 'back' ? (i === 0 || i === ed.bt.length - 1) : i === 0;
+function sampleLeg(ts, vs, k0, k1) {                              // spline cubique d'Hermite (Catmull-Rom), vitesse ≥ 0
+  const out = new Float32Array(k1 - k0 + 1), m = j => { const a = Math.max(0, j - 1), b = Math.min(ts.length - 1, j + 1); return (vs[b] - vs[a]) / (ts[b] - ts[a]); };
+  let i = 0;
+  for (let k = k0; k <= k1; k++) {
+    while (i < ts.length - 2 && k > ts[i + 1]) i++;
+    const h = ts[i + 1] - ts[i], u = h > 0 ? (k - ts[i]) / h : 0, u2 = u * u, u3 = u2 * u, m0 = m(i) * h, m1 = m(i + 1) * h;
+    out[k - k0] = Math.max(0, (2 * u3 - 3 * u2 + 1) * vs[i] + (u3 - 2 * u2 + u) * m0 + (-2 * u3 + 3 * u2) * vs[i + 1] + (u3 - u2) * m1);
+  }
+  return out;
+}
+function zLookup(um, zm, q) {                                      // z en fonction d'une abscisse croissante um (bornée aux extrémités)
+  const n = um.length; if (q <= um[0]) return zm[0]; if (q >= um[n - 1]) return zm[n - 1];
+  let lo = 0, hi = n - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (um[mid] <= q) lo = mid; else hi = mid; }
+  const d = um[hi] - um[lo]; return d < 1e-9 ? zm[lo] : zm[lo] + (zm[hi] - zm[lo]) * (q - um[lo]) / d;
+}
+function editToTraj(ed) {
+  const n = ed.cn, top = ed.top, b = sampleLeg(ed.bt, ed.bv, 0, top), f = sampleLeg(ed.ft, ed.fv, top, n - 1), B = ed.tr0;
+  const vx = new Float32Array(n), x = new Float32Array(n), z = new Float32Array(n);
+  for (let k = 0; k <= top; k++) vx[k] = -b[k]; for (let k = top; k < n; k++) vx[k] = f[k - top]; vx[top] = 0;
+  x[0] = B.cx[0]; for (let k = 1; k < n; k++) x[k] = x[k - 1] + 0.5 * (vx[k] + vx[k - 1]) * 0.001;
+  // forme du chemin conservée : z = z_origine(x) sur chaque branche (recul : x décroissant ; aller : x croissant)
+  const ub = [], zb = [], uf = [], zf = []; let mx = -1e9;
+  for (let k = 0; k <= top; k++) { mx = Math.max(mx, -B.cx[k]); ub.push(mx); zb.push(B.cz[k]); }
+  mx = -1e9; for (let k = top; k < n; k++) { mx = Math.max(mx, B.cx[k]); uf.push(mx); zf.push(B.cz[k]); }
+  for (let k = 0; k <= top; k++) z[k] = zLookup(ub, zb, -x[k]); for (let k = top + 1; k < n; k++) z[k] = zLookup(uf, zf, x[k]);
+  const zs = new Float32Array(n), vz = new Float32Array(n);
+  for (let k = 0; k < n; k++) { let sacc = 0, c = 0; for (let j = Math.max(0, k - 4); j <= Math.min(n - 1, k + 4); j++) { sacc += z[j]; c++; } zs[k] = sacc / c; }
+  for (let k = 0; k < n; k++) vz[k] = (zs[Math.min(n - 1, k + 1)] - zs[Math.max(0, k - 1)]) / ((Math.min(n - 1, k + 1) - Math.max(0, k - 1)) / 1000);
+  return finishTraj(x, zs, vx, vz, ed.nReal);
+}
+function applyEdit() {
+  const tr = editToTraj(pad.edit); if (!tr) return;
+  pad.traj = S.traj = tr; pad.pl = plausibility(tr);
+}
+function chartPt(e) { const r = chartEl.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+function editHit(px, py) {
+  if (!editOn()) return null; const ed = pad.edit; let best = null, bd = 16;
+  for (const leg of ['back', 'fwd']) {
+    const g = chartGeo[leg]; if (!g) continue; const ts = leg === 'back' ? ed.bt : ed.ft, vs = leg === 'back' ? ed.bv : ed.fv;
+    for (let i = 0; i < ts.length; i++) { if (editPinned(leg, i, ed)) continue; const d = Math.hypot(px - g.X(leg === 'back' ? ts[i] : ts[i] - ed.top), py - g.Y(vs[i])); if (d < bd) { bd = d; best = { leg, i }; } }
+  }
+  return best;
+}
+const editVals = (ed, leg) => leg === 'back' ? ed.bv : ed.fv;
+function editSet(leg, i, v) { const ed = pad.edit; editVals(ed, leg)[i] = Math.max(0, Math.min(V_EDIT_MAX, v)); applyEdit(); }
+chartEl.addEventListener('pointerdown', e => {
+  const [px, py] = chartPt(e), h = editHit(px, py); if (!h) { editSel = null; return; }
+  chartEl.setPointerCapture(e.pointerId); e.preventDefault();
+  editSel = h; editDrag = { leg: h.leg, i: h.i, y0: py, v0: editVals(pad.edit, h.leg)[h.i], ymax: chartYmax, last: 0 };
+  S.imp = null; reset(); S.paused = true;                        // la scène se fige à l'adresse pendant l'édition
+});
+chartEl.addEventListener('pointermove', e => {
+  const [px, py] = chartPt(e);
+  if (editDrag) {
+    const g = chartGeo[editDrag.leg], k = (e.shiftKey ? 0.1 : 1) * (editDrag.ymax / 1000) / g.h;   // Maj : pas fin (÷10)
+    if (e.shiftKey !== editDrag.fine) { editDrag.y0 = py; editDrag.v0 = editVals(pad.edit, editDrag.leg)[editDrag.i]; editDrag.fine = e.shiftKey; }
+    editSet(editDrag.leg, editDrag.i, editDrag.v0 + (editDrag.y0 - py) * k); return;
+  }
+  editHover = editHit(px, py); chartEl.style.cursor = editHover ? 'ns-resize' : '';
+});
+const endEditDrag = () => { if (!editDrag) return; editDrag = null; S.paused = false; playDrawn(); };
+chartEl.addEventListener('pointerup', endEditDrag); chartEl.addEventListener('pointercancel', endEditDrag);
+chartEl.addEventListener('pointerleave', () => { if (!editDrag) { editHover = null; chartEl.style.cursor = ''; } });
+chartEl.addEventListener('dblclick', e => {                          // double clic : valeur d'origine
+  const [px, py] = chartPt(e), h = editHit(px, py); if (!h) return;
+  const ed = pad.edit; editSet(h.leg, h.i, (h.leg === 'back' ? ed.bv0 : ed.fv0)[h.i]); playDrawn();
+});
+addEventListener('keydown', e => {                                 // point sélectionné : ↑/↓ = ±10 mm/s, Maj = ±1 mm/s
+  if (e.key === 'Escape') { editSel = null; return; }
+  if (!editSel || !editOn() || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault(); const step = (e.shiftKey ? 0.001 : 0.01) * (e.key === 'ArrowUp' ? 1 : -1), ed = pad.edit;
+  editSet(editSel.leg, editSel.i, editVals(ed, editSel.leg)[editSel.i] + step);
+  clearTimeout(editTimer); editTimer = setTimeout(() => { S.imp = null; reset(); }, 350);
+});
 function processStroke() {
   const r = pad.raw; if (!r || r.t.length < 6) { pad.hint = 'Tracé trop court.'; return false; }
   const g = padGeom(), sm = pad.s_mm / 1000, t0 = r.t[0];
   const tr = buildTraj(r.t.map(t => (t - t0) / 1000), r.x.map(x => (x - g.mx) * sm), r.y.map(y => (y - g.my) * sm));
   if (!tr) { pad.hint = 'Geste trop court : reculez puis frappez avec plus d\'amplitude.'; return false; }
-  pad.traj = tr; S.traj = tr; pad.hint = ''; pad.pl = plausibility(tr); pad.bub = { x: 0, y: 0, vx: 0, vy: 0 }; return true;
+  pad.traj = tr; S.traj = tr; pad.edit = makeEdit(tr); editSel = null; editHover = null; pad.hint = ''; pad.pl = plausibility(tr); pad.bub = { x: 0, y: 0, vx: 0, vy: 0 }; return true;
 }
 function playDrawn() { S.imp = null; reset(); }
 function padPos(e) { const r = padc.getBoundingClientRect(), k = PAD_W / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; }
@@ -938,7 +1075,7 @@ padc.addEventListener('pointerup', padFinish); padc.addEventListener('pointercan
   fEl.addEventListener('input', () => { updF(); if (S.traj) playDrawn(); });
   const iEl = $('padi');
   const updI = () => { params.inert = parseFloat(iEl.value); iEl.parentElement.querySelector('output').textContent = params.inert ? 'retard ' + params.inert + ' ms' : 'aucune'; };
-  iEl.addEventListener('input', () => { updI(); if (pad.raw && !pad.drawing && processStroke()) playDrawn(); });
+  iEl.addEventListener('input', () => { updI(); if (pad.edit && editOn()) { applyEdit(); playDrawn(); } else if (pad.raw && !pad.drawing && processStroke()) playDrawn(); });
   updS(); updF(); updI();
   $('drawbtn').addEventListener('click', () => { padEl.hidden = !padEl.hidden; });
   $('padclose').addEventListener('click', e => { e.stopPropagation(); padEl.hidden = true; });
@@ -950,8 +1087,8 @@ padc.addEventListener('pointerup', padFinish); padc.addEventListener('pointercan
       padEl.style.left = Math.max(0, Math.min(innerWidth - 120, e.clientX - dg.dx)) + 'px'; padEl.style.top = Math.max(0, Math.min(innerHeight - 40, e.clientY - dg.dy)) + 'px'; });
     h.addEventListener('pointerup', () => { if (dg && !dg.moved) padEl.classList.toggle('min'); dg = null; });
   }
-  $('padreplay').addEventListener('click', () => { if (S.traj) { trials.length = 0; S.cur = null; playDrawn(); } else pad.hint = 'Dessinez d\'abord un swing.'; });
-  $('padauto').addEventListener('click', () => { S.traj = null; pad.traj = null; pad.raw = null; pad.pl = null; S.imp = null; trials.length = 0; S.cur = null; reset(); pad.hint = 'Swing automatique rétabli.'; });
+  $('padreplay').addEventListener('click', () => replayBtn(true));
+  $('padauto').addEventListener('click', () => { S.traj = null; pad.traj = null; pad.raw = null; pad.pl = null; pad.edit = null; editSel = null; S.imp = null; trials.length = 0; S.cur = null; reset(); pad.hint = 'Swing automatique rétabli.'; });
 }
 const padStats = $('padstats');
 function fmtDeg(v, lr) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '° ' + (lr ? (v >= 0 ? 'D' : 'G') : ''); }
@@ -1019,6 +1156,8 @@ function drawPad() {
       c.beginPath(); c.moveTo(X(k - 4), Y(k - 4)); c.lineTo(X(k), Y(k)); c.stroke();
     }
     c.fillStyle = 'rgba(255,255,255,.85)'; for (let k = 0; k < tr.cn; k += 50) { c.beginPath(); c.arc(X(k), Y(k), 2.2, 0, 7); c.fill(); }
+    const hl = editDrag || editHover || editSel;                 // point de la courbe de vitesse sélectionné → même instant sur le tracé
+    if (hl && pad.edit && pad.edit.tr0 && editOn()) { const kk = Math.min(tr.cn - 1, (hl.leg === 'back' ? pad.edit.bt : pad.edit.ft)[hl.i]); c.beginPath(); c.arc(X(kk), Y(kk), 7, 0, 7); c.strokeStyle = '#ff9d2e'; c.lineWidth = 2.5; c.stroke(); }
     if (S.traj === tr) { const k = Math.min(tr.n - 1, Math.max(0, Math.round(S.t * 1000))), kc = Math.min(tr.cn - 1, k);
       c.beginPath(); c.arc(X(kc), Y(kc), 3, 0, 7); c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 1.5; c.stroke();   // la main (commande)
       c.beginPath(); c.arc(g.mx + tr.xs[k] * g.pxm, g.my + tr.zs[k] * g.pxm, 5, 0, 7); c.fillStyle = '#fff'; c.fill(); c.strokeStyle = '#000'; c.lineWidth = 1; c.stroke(); }
@@ -1051,7 +1190,7 @@ function frame(now) {
   }
   if (debugT === null) S.scale += (target - S.scale) * (1 - Math.exp(-dt * 5)); else S.scale = 0;
 
-  let sim = dt * S.scale;
+  let sim = (S.paused || userPaused) ? 0 : dt * S.scale;
   if (sim > 0) { const n = Math.min(300, Math.ceil(sim / H_STEP)); for (let i = 0; i < n; i++) stepPhysics(sim / n); }
 
   if (S.stopped) { S.stopT += dt; if (params.loop && S.stopT > 1.8 && debugT === null) reset(); }
@@ -1067,7 +1206,8 @@ function drawChart() {
   const c = cctx; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#fff'; c.fillRect(0, 0, W, H);
   const all = trials.concat(S.cur ? [S.cur] : []);
   let peak = 0; for (const t of all) { for (let i = 1; i < t.fwd.length; i += 2) peak = Math.max(peak, t.fwd[i]); for (let i = 1; i < t.back.length; i += 2) peak = Math.max(peak, t.back[i]); }
-  const ymax = Math.max(2500, Math.ceil(peak * 1000 * 1.05 / 625) * 625);
+  if (editOn()) for (const v of pad.edit.bv.concat(pad.edit.fv)) peak = Math.max(peak, v);
+  const ymax = editDrag ? editDrag.ymax : Math.max(2500, Math.ceil(peak * 1000 * 1.05 / 625) * 625); chartYmax = ymax;
   const plot = (x0, pw, title, xmax, xstep, key) => {
     const m = { l: 58, r: 12, t: 48, b: 36 }, w = pw - m.l - m.r, h = H - m.t - m.b;
     const X = ms => x0 + m.l + ms / xmax * w, Y = v => m.t + h - v * 1000 / ymax * h;
@@ -1095,6 +1235,41 @@ function drawChart() {
       }
     }
     c.restore();
+    chartGeo[key] = { X, Y, h, m };
+    if (editOn()) {                                                  // courbe de la main (éditable) : pointillés + points toutes les 50 ms
+      const ed = pad.edit, ts = key === 'back' ? ed.bt : ed.ft, vs = key === 'back' ? ed.bv : ed.fv, off = key === 'back' ? 0 : ed.top;
+      const smp = sampleLeg(ts, vs, ts[0], ts[ts.length - 1]);
+      c.save(); c.beginPath(); c.rect(x0 + m.l, m.t - 4, w + 2, h + 6); c.clip();
+      c.strokeStyle = '#222'; c.lineWidth = 1.5; c.setLineDash([5, 4]); c.beginPath();
+      for (let k = 0; k < smp.length; k += 3) { const px = X(ts[0] - off + k), py = Y(smp[k]); k ? c.lineTo(px, py) : c.moveTo(px, py); }
+      c.stroke(); c.setLineDash([]); c.restore();
+      const act = editDrag || editHover || editSel;
+      for (let i = 0; i < ts.length; i++) {
+        const px = X(ts[i] - off), py = Y(vs[i]), pin = editPinned(key, i, ed), on = act && act.leg === key && act.i === i;
+        c.beginPath(); c.arc(px, py, pin ? 2.5 : on ? 6.5 : 4.5, 0, 7);
+        c.fillStyle = pin ? '#bbb' : on ? '#ff9d2e' : '#fff'; c.fill(); c.strokeStyle = '#222'; c.lineWidth = 1.5; c.stroke();
+        if (on) {
+          const v0 = (key === 'back' ? ed.bv0 : ed.fv0)[i], txt = Math.round(vs[i] * 1000) + ' mm/s' + (Math.abs(vs[i] - v0) > 0.0005 ? '  (orig. ' + Math.round(v0 * 1000) + ')' : '');
+          c.font = '11px "Helvetica Neue",Helvetica,Arial,sans-serif'; const tw = c.measureText(txt).width + 10, bx = Math.min(x0 + m.l + w - tw, Math.max(x0 + m.l, px - tw / 2)), by = py < m.t + 26 ? py + 12 : py - 28;
+          c.fillStyle = '#222'; c.fillRect(bx, by, tw, 18); c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(txt, bx + 5, by + 9);
+        }
+      }
+    }
+    // position courante du putter pendant le replay : point coloré sur la courbe (et point de la courbe éditable le plus proche)
+    if (S.cur && !S.stopped) {
+      const inBack = S.t < S.T0;
+      if ((key === 'back') === inBack) {
+        const d = S.cur[key], col = S.cur.color;
+        if (editOn()) {
+          const ed = pad.edit, ts = key === 'back' ? ed.bt : ed.ft, vs = key === 'back' ? ed.bv : ed.fv, tc = key === 'back' ? S.t * 1000 : (S.t - S.T0) * 1000 + ed.top;
+          let j = 0; for (let i = 0; i < ts.length; i++) if (ts[i] <= tc) j = i;
+          c.beginPath(); c.arc(X(ts[j] - (key === 'back' ? 0 : ed.top)), Y(vs[j]), 5.5, 0, 7); c.fillStyle = col; c.fill(); c.strokeStyle = '#222'; c.lineWidth = 1.5; c.stroke();
+        }
+        if (d.length >= 2) { const px = X(d[d.length - 2]), py = Y(d[d.length - 1]);
+          c.beginPath(); c.arc(px, py, 7, 0, 7); c.fillStyle = col; c.fill(); c.lineWidth = 2.5; c.strokeStyle = '#fff'; c.stroke();
+          c.beginPath(); c.arc(px, py, 8.8, 0, 7); c.lineWidth = 1; c.strokeStyle = '#000'; c.stroke(); }
+      }
+    }
   };
   plot(0, W / 2, '-backswing-', 900, 225, 'back');
   plot(W / 2, W / 2, '-forward swing-', 1200, 300, 'fwd');
@@ -1146,6 +1321,7 @@ function render(dt) {
 
   // HUD
   const sp = Math.hypot(S.v.x, S.v.z);
+  updateReplayBtns();
   hud.innerHTML = `<div><b>${sp.toFixed(2)}</b><span>m/s balle</span></div>` +
     `<div><b>${(S.hit ? S.b.x : 0).toFixed(2)}</b><span>m parcourus</span></div>` +
     `<div><b>${Math.round(S.w.length() * 60 / (2 * Math.PI))}</b><span>tr/min</span></div>` +
@@ -1164,6 +1340,7 @@ resize(); reset();
   }
 }
 if (qs.has('pad')) padEl.hidden = false;
+if (qs.has('hidemenu')) toggleUI();
 if (qs.has('demo')) {   // test : geste synthétique (recul 0,6 s, descente ~0,3 s, léger tremblement latéral)
   padEl.hidden = false; if (qs.has('inert')) { $('padi').value = qs.get('inert'); $('padi').dispatchEvent(new Event('input')); }
   const g = padGeom(), sm = pad.s_mm / 1000, ts = [], xs = [], ys = [], r = rng(9);
@@ -1174,6 +1351,7 @@ if (qs.has('demo')) {   // test : geste synthétique (recul 0,6 s, descente ~0,3
     ts.push(1000 + tt * 1000); xs.push(g.mx + X / sm); ys.push(g.my + Z / sm);
   }
   pad.raw = { t: ts, x: xs, y: ys }; if (processStroke()) { S.traj = pad.traj; reset(); }
+  if (qs.has('edit')) { const [lg, i, d] = qs.get('edit').split(':'); editSel = { leg: lg, i: +i }; editSet(lg, +i, editVals(pad.edit, lg)[+i] + parseFloat(d)); reset(); }
 }
 if (debugT !== null) {   // mode capture : avance la simulation jusqu'à t puis fige
   let n = Math.round(debugT / H_STEP); while (n-- > 0) stepPhysics(H_STEP);
