@@ -44,6 +44,28 @@
   #rpsvg{width:100%;height:100%;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.25)}
   @media print{body>*:not(#report){display:none!important}#report{position:static;background:#fff;display:block!important}.rp-bar{display:none}.rp-stage{padding:0}#rpsvg{width:100%;height:auto;box-shadow:none}@page{size:landscape;margin:8mm}}
   #about{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(4,8,3,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #livebtn.on{border-color:#a8d65a!important;color:#e4f5bd;background:rgba(70,100,30,.65)!important}
+  #stabbox{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:rgba(10,18,8,.55);border:1px solid rgba(255,255,255,.15);font-size:12px;font-weight:500;color:#e8efdf;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #stabbox[hidden]{display:none}
+  #stabbar{display:block;width:72px;height:5px;border-radius:3px;background:rgba(255,255,255,.2);overflow:hidden}
+  #stabbar u{display:block;height:100%;width:0;border-radius:3px;background:#a8d65a;transition:width .12s linear,background .25s}
+  #stabbox.bad #stabbar u{background:#e5533d}
+  #stabtxt{font-weight:600;color:#bfe08a} #stabtxt:empty{display:none} #stabbox.ok{border-color:rgba(168,214,90,.55)}
+  #phonebtn.on{border-color:#a8d65a;color:#cfe9a0}
+  #phonehud{display:none;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:rgba(10,18,8,.55);border:1px solid rgba(255,255,255,.15);font-size:12px;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #phonehud.show{display:flex} #phonehud i{width:8px;height:8px;border-radius:50%;background:#e0a93b} #phonehud.on i{background:#a8d65a}
+  #phonebox{position:fixed;inset:0;z-index:65;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:rgba(4,8,3,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  #phonebox[hidden]{display:none}
+  .pb-card{width:min(420px,100%);max-height:100%;overflow:auto;padding:22px 24px;border-radius:16px;background:rgba(14,24,10,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(0,0,0,.6);text-align:center}
+  .pb-card h2{margin:0;font:500 24px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#fff}
+  .pb-sub{margin:6px 0 14px;opacity:.7}
+  #pbqr{display:inline-block;background:#fff;padding:10px;border-radius:10px;min-height:20px} #pbqr:empty{display:none}
+  #pbcode{font:700 40px/1.2 "Helvetica Neue",Arial,sans-serif;letter-spacing:.14em;margin-top:10px}
+  #pburl{font-size:11px;opacity:.55;word-break:break-all;margin:2px 0 8px}
+  #pbstat{font-weight:600;color:#bfe08a;margin-bottom:8px}
+  .pb-card ol{text-align:left;margin:8px 0 14px;padding-left:20px;line-height:1.6;opacity:.85}
+  .pb-chk{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 12px;font-size:12px;opacity:.85;cursor:pointer}
+  .pb-btns{display:flex;gap:8px;justify-content:center}.pb-btns button{width:auto;margin:0;padding:8px 18px}
   #about[hidden]{display:none}
   #about .ab-card{width:min(460px,100%);max-height:100%;overflow:auto;padding:22px 24px;border-radius:16px;background:rgba(14,24,10,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(0,0,0,.6)}
   #about h2{margin:0;font:500 24px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;color:#fff}
@@ -144,7 +166,7 @@
     <div class="sp-go">Touchez l'écran ou appuyez sur une touche pour commencer</div>
   </div>
 </div>
-<div id="topbar"><button id="aboutbtn" type="button">About</button><button id="drawbtn" type="button">Putting Stroke</button><button id="reportbtn" type="button" disabled title="Play a putt first">Report</button><button id="hidebtn" type="button">Hide Menu</button></div>
+<div id="topbar"><button id="aboutbtn" type="button">About</button><button id="drawbtn" type="button">Putting Stroke</button><button id="reportbtn" type="button" disabled title="Play a putt first">Report</button><button id="phonebtn" type="button" title="Piloter le swing avec l'accéléromètre d'un téléphone">Phone</button><button id="hidebtn" type="button">Hide Menu</button><button id="livebtn" type="button" style="display:none" title="Le club suit le téléphone en temps réel">Temps réel</button><span id="phonehud"><i></i><span></span></span><span id="stabbox" hidden><b id="stabbar"><u></u></b><span id="stabtxt"></span></span></div>
 <div id="report" hidden role="dialog" aria-label="Report">
   <div class="rp-bar"><button id="rpprev" type="button" aria-label="Previous page">◀</button><span id="rptitle"></span><button id="rpnext" type="button" aria-label="Next page">▶</button><div id="rptabs"></div><span class="rp-sp"></span><button id="rpprint" type="button">Print</button><button id="rpclose" type="button">Close</button></div>
   <div class="rp-stage"><svg id="rpsvg" viewBox="0 0 1456 816" preserveAspectRatio="xMidYMid meet"></svg></div>
@@ -160,11 +182,28 @@
       <li><b>Espace</b> ou <b>R</b> : rejouer le swing</li>
       <li><b>H</b> ou « Hide Menu » : cacher / afficher les menus</li>
       <li><b>Putting Stroke</b> : ouvre la fenêtre de dessin (vue de dessus) pour tracer votre propre geste</li>
+      <li><b>Temps réel</b> (téléphone connecté) : le club suit le téléphone en direct ; la balle est frappée dans la simulation. <b>Replay</b> rejoue la version traitée du putt</li>
+      <li><b>Phone</b> : un téléphone fixé sur le putter (page phone.html) envoie son accéléromètre ; son profil de vitesse pilote le swing. Un seul téléphone à la fois</li>
       <li><b>Stroke Dynamics</b> (après un tracé) : glissez les points de la courbe en pointillés pour changer la vitesse (<b>Maj</b> = pas fin, <b>↑ ↓</b> = ±10 mm/s, <b>double clic</b> = valeur d'origine)</li>
     </ul>
     <h3>Crédits</h3>
     <p>Son d'impact : « putt.wav » par 170129 (Freesound n° 408260, licence CC0). Rendu : three.js r128.</p>
     <button id="aboutx" type="button">Fermer</button>
+  </div>
+</div>
+<div id="phonebox" hidden role="dialog" aria-modal="true" aria-label="Phone">
+  <div class="pb-card">
+    <h2>Phone</h2>
+    <p class="pb-sub">L'accéléromètre d'un téléphone fixé sur le putter pilote le swing : son profil de vitesse (recul, puis frappe) est appliqué au putter.</p>
+    <div id="pbqr"></div>
+    <div id="pbcode">…</div>
+    <div id="pburl"></div>
+    <div id="pbstat"></div>
+    <ol><li>Ouvrez <b>phone.html</b> sur le téléphone (QR ou code), puis « Démarrer »</li><li>Immobilisez le putter à l'adresse (« Adresse · prêt »)</li><li>Backswing, puis forward swing : le putt est rejoué au ralenti</li></ol>
+    <label class="pb-chk"><input id="pbimp" type="checkbox" checked> Appliquer l'angle de face mesuré (gyro)</label>
+    <label class="pb-chk"><input id="pbauto" type="checkbox"> Remise à zéro automatique en fin de putt</label>
+    <label class="pb-chk"><input id="pbbell" type="checkbox" checked> Cloche quand le détecteur est prêt</label>
+    <div class="pb-btns"><button id="pbrec" type="button" title="Télécharge les échantillons bruts et les phases détectées (JSON)">Enregistrer l'essai</button><button id="pbdisc" type="button">Déconnecter</button><button id="pbclose" type="button">Fermer</button></div>
   </div>
 </div>
 <div id="hud"></div>
@@ -203,6 +242,7 @@
 </div>
 
 <script src="three.min.js"></script>
+<script src="stroke.js"></script>
 <script>
 (() => {
 'use strict';
@@ -235,6 +275,7 @@ const LIE = 70 * Math.PI / 180, LEAN = 3 * Math.PI / 180;   // lie 70°, manche 
 const qs0 = new URLSearchParams(location.search);
 let lite = qs0.has('lite') ? qs0.get('lite') !== '0' : (navigator.maxTouchPoints > 1 && /Macintosh|iPad|iPhone/.test(navigator.userAgent));
 let grassGeo = null, userPaused = false;
+let directHead = false;   // swing du téléphone : la vitesse mesurée est celle de la tête (pas de modèle d'inertie main → tête)
 const params = { slow: 1, dist: 4, vp: 1.35, loft: 3.0, psi0: 0, stimp: 10, blur: 1, ramp: true, loop: false, line: true, inert: 35 };
 const qs = new URLSearchParams(location.search);
 const debugT = qs.has('t') ? parseFloat(qs.get('t')) : null;
@@ -502,7 +543,7 @@ function newTrial() {
   S.cur = { back: [], fwd: [], imp: null, color: TRIAL_COLORS[trialCount++ % 5] };
 }
 function reset() {
-  userPaused = false; updateLine();
+  userPaused = false; S.paused = false; updateLine();
   S.rec = { t: [], x: [], y: [], z: [], yaw: [], v: [] }; S.shotDone = false; if (!S.fcIn) S.fcIn = new T.Vector3();
   S.t = 0; S.thd = 0; S.fwd = false; S.fa = 25; S.lastSample = -1; S.tStop = -1; newTrial();
   S.thA = THETA_I - 0.0065;                        // adresse : face ≈ 8 mm derrière la balle
@@ -546,9 +587,9 @@ function applyTraj(t) {
   S.pfx = xf; S.pfy = yf; S.pfz = zr;
   const dFx = -Math.sin(th) * d0.x - Math.cos(th) * d0.y, dFy = Math.cos(th) * d0.x - Math.sin(th) * d0.y;
   S.vf.set(vx, vx * dFy / dFx, vz);
-  const dphi = ended ? 0 : (tr.phi[k1] - tr.phi[k]) * 1000;
-  S.omg.set(0, -FACE_FOLLOW * dphi, vx / dFx);                   // vitesses angulaires de la tête : lacet (chemin) et tangage (arc)
-  S.yawNow = params.psi0 * Math.PI / 180 + FACE_FOLLOW * ph;      // direction de la face (+ = vers +z, à droite de la ligne)
+  const mp = tr.psi ? 1 : FACE_FOLLOW, dphi = ended ? 0 : ((tr.psi || tr.phi)[k1] - (tr.psi || tr.phi)[k]) * 1000;
+  S.omg.set(0, -mp * dphi, vx / dFx);                            // vitesses angulaires de la tête : lacet (chemin, ou face mesurée) et tangage (arc)
+  S.yawNow = params.psi0 * Math.PI / 180 + (tr.psi ? L(tr.psi) : FACE_FOLLOW * ph);      // direction de la face (+ = vers +z, à droite de la ligne) ; mesurée par le gyro pour un putt du téléphone
   qa.setFromAxisAngle(Y_AXIS, -S.yawNow); qb.setFromAxisAngle(Z_AXIS, th); qa.multiply(qb);
   putter.quaternion.copy(qa);
   Fp.copy(S.fpt).applyQuaternion(qa);
@@ -582,6 +623,17 @@ function playImpact(speed) {
   src.buffer = sndBuf[i]; src.playbackRate.value = 0.97 + Math.random() * 0.06;
   g.gain.value = Math.max(0.25, Math.min(1, 0.3 + 0.45 * speed));   // plus fort pour une tête plus rapide
   src.connect(g); g.connect(actx.destination); src.start();
+}
+
+/* petite cloche discrète : annonce que le détecteur est prêt (synthèse : un son clair + deux partiels inharmoniques qui s'éteignent en ~1,3 s) */
+function playReady() {
+  if (!actx || actx.state !== 'running') return;
+  const t = actx.currentTime, out = actx.createGain();
+  out.gain.setValueAtTime(0.0001, t); out.gain.exponentialRampToValueAtTime(0.07, t + 0.006); out.gain.exponentialRampToValueAtTime(0.0001, t + 1.3); out.connect(actx.destination);
+  for (const [r, a, d] of [[1, 1, 1.3], [2.76, 0.32, 0.7], [5.4, 0.12, 0.35]]) {
+    const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = 1318.5 * r;           // mi6
+    g.gain.setValueAtTime(a, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.05);
+  }
 }
 
 /* ───────────── physique ───────────── */
@@ -791,6 +843,9 @@ function applyLite() { if (grassGeo) grassGeo.instanceCount = lite ? 200000 : 45
 /* ───────────── caméra (orbite) ───────────── */
 const cam = { az: 0.0, el: 0.085, dist: 0.33, zoom: 4.8 };
 let drag = null, showPivot = false, camMode = (new URLSearchParams(location.search).get("cam")) || "putter";
+// pose d'orbite par vue (chaque vue mémorise la sienne, comme son zoom) : Putter = derrière la balle, 18° au-dessus du sol, à 6 m (relevée sur la vue réglée dans Chrome) ; Ball = gros plan de côté
+const camPose = { putter: { az: -1.293, el: 0.314 }, ball: { az: 0.0, el: 0.085 } };
+Object.assign(cam, camPose[camMode] || camPose.putter);
 const ptrs = new Map(); let pinch = null;
 canvas.addEventListener('pointerdown', e => {
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); canvas.setPointerCapture(e.pointerId);
@@ -832,11 +887,12 @@ applyLite();
 $('line').addEventListener('change', e => { params.line = e.target.checked; updateLine(); });
 $('loop').addEventListener('change', e => params.loop = e.target.checked);
 let zoomBefore = cam.zoom;
-const camZoom = { putter: 4.8, ball: 1 };          // zoom mémorisé par vue (putter : 3 m, ball : gros plan)
+const camZoom = { putter: 9.6, ball: 1 };          // zoom mémorisé par vue (putter : distance maximale, 6 m ; ball : gros plan)
 cam.zoom = camZoom[camMode] || 4.8;
 { const z = parseFloat(new URLSearchParams(location.search).get('zoom')); if (z) { camZoom[camMode] = z; cam.zoom = z; } }
 function setCam(m) {
-  camZoom[camMode] = cam.zoom; camMode = m; cam.zoom = camZoom[m];
+  camZoom[camMode] = cam.zoom; camPose[camMode] = { az: cam.az, el: cam.el };         // la vue quittée garde son zoom et son orbite
+  camMode = m; cam.zoom = camZoom[m]; Object.assign(cam, camPose[m]);
   document.querySelectorAll('#camseg button').forEach(b => { const on = b.dataset.cam === m; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
 }
 document.querySelectorAll('#camseg button').forEach(b => b.addEventListener('click', () => setCam(b.dataset.cam)));
@@ -850,7 +906,7 @@ document.querySelectorAll('#camseg button').forEach(b => { const on = b.dataset.
 }
 let uiHidden = false;
 function toggleUI() { uiHidden = !uiHidden; for (const id of ['panel', 'chartbox', 'pad']) $(id).style.display = uiHidden ? 'none' : '';
-  for (const id of ['drawbtn', 'aboutbtn', 'reportbtn']) $(id).style.visibility = uiHidden ? 'hidden' : '';   // invisibles mais gardent leur place : « Show Menu » reste où est « Hide Menu »
+  for (const id of ['drawbtn', 'aboutbtn', 'reportbtn', 'phonebtn', 'livebtn']) $(id).style.visibility = uiHidden ? 'hidden' : '';   // invisibles mais gardent leur place : « Show Menu » reste où est « Hide Menu »
   $('hidebtn').textContent = uiHidden ? 'Show Menu' : 'Hide Menu'; }
 $('hidebtn').addEventListener('click', toggleUI);
 { const ab = $('about'), toggleAbout = v => { ab.hidden = !v; };
@@ -858,7 +914,7 @@ $('hidebtn').addEventListener('click', toggleUI);
   ab.addEventListener('click', e => { if (e.target === ab) toggleAbout(false); });
   addEventListener('keydown', e => { if (e.key === 'Escape') toggleAbout(false); });
 }
-const replay = () => { trials.length = 0; S.cur = null; reset(); };   // rejeu manuel : efface le diagramme
+const replay = () => { trials.length = 0; S.cur = null; liveToBatch(); reset(); };   // rejeu manuel : efface le diagramme
 // Replay ⇄ Pause : pendant la séquence le bouton devient « ❚❚ Pause » ; en pause, « ▶ Resume » ; séquence terminée, « Replay »
 const running = () => !S.stopped;
 function replayBtn(fromPad) {
@@ -938,7 +994,7 @@ function finishTraj(tx, tz, tvx, tvz, nReal) {
   //     À vitesse v la tête traîne de v·τ avec τ = 2ζ/ωn.
   //     La tête a donc de l'inertie : elle retarde sur la main à l'accélération, dépasse un peu au changement de sens, et continue après l'arrêt.
   let N = n, hx = tx, hz = tz, hvx = tvx, hvz = tvz;
-  const tau = params.inert / 1000;
+  const tau = directHead ? 0 : params.inert / 1000;
   if (tau > 0.002) {
     const zeta = 0.8, wn = 2 * zeta / tau, h = 0.0005, M = nReal + 900, tauC = Math.min(0.3, Math.max(0.08, 4 * tau));
     // lâcher : dès que la main ralentit sous 25 % de son pic de vitesse (après le sommet du recul), le club n'est plus retenu
@@ -1074,12 +1130,242 @@ addEventListener('keydown', e => {                                 // point sél
 });
 function processStroke() {
   const r = pad.raw; if (!r || r.t.length < 6) { pad.hint = 'Tracé trop court.'; return false; }
-  const g = padGeom(), sm = pad.s_mm / 1000, t0 = r.t[0];
+  const g = padGeom(), sm = pad.s_mm / 1000, t0 = r.t[0], dh = directHead; directHead = false;
   const tr = buildTraj(r.t.map(t => (t - t0) / 1000), r.x.map(x => (x - g.mx) * sm), r.y.map(y => (y - g.my) * sm));
-  if (!tr) { pad.hint = finishTraj.why ? 'Coup non valide : ' + finishTraj.why + '.' : 'Geste trop court : reculez puis frappez avec plus d\'amplitude.'; return false; }
+  if (!tr) { directHead = dh; pad.hint = finishTraj.why ? 'Coup non valide : ' + finishTraj.why + '.' : 'Geste trop court : reculez puis frappez avec plus d\'amplitude.'; return false; }
   pad.traj = tr; S.traj = tr; pad.edit = makeEdit(tr); editSel = null; editHover = null; pad.hint = ''; pad.pl = plausibility(tr); pad.bub = { x: 0, y: 0, vx: 0, vy: 0 }; return true;
 }
-function playDrawn() { S.imp = null; reset(); }
+function playDrawn() { S.imp = null; liveToBatch(); reset(); }
+
+/* ───────────── téléphone : son accéléromètre, fixé sur le putter, pilote le swing ─────────────
+   phone.html envoie l'accélération (PeerJS/WebRTC, liaison directe) ; stroke.js en déduit les phases (adresse, backswing, forward swing, impact, fin)
+   et le profil de vitesse. Ce profil devient la trajectoire du putter (ligne droite dans l'axe de visée), comme un tracé dessiné. */
+const ph = { treated: false, imperf: true, auto: false, bell: true, live: true, det: new StrokeDetector(), peer: null, conn: null, pid: '', name: '', code: '', msg: '', msgT: 0, rec: [], ev: [], lastState: '' };
+try { ph.imperf = localStorage.getItem('puttImperf') !== '0'; ph.auto = localStorage.getItem('puttAuto') === '1'; ph.bell = localStorage.getItem('puttBell') !== '0'; ph.live = localStorage.getItem('puttLive') !== '0'; } catch (e) {}
+try { const lv = +localStorage.getItem('puttLever'); if (lv > 0.4 && lv < 3) ph.det.lever = lv; } catch (e) {}      // bras de levier (v = L·ω) appris sur les putts précédents
+const PH_LAB = { settle: 'Stabilisation…', address: 'Adresse · prêt', back: 'Backswing', fwd: 'Forward swing', follow: 'Impact', done: 'Fin de swing · remise à zéro' };
+const loadScript = src => new Promise((ok, ko) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => ko(new Error(src)); document.head.appendChild(s); });
+const phOn = () => !!(ph.conn && ph.conn.open);
+const zeroPhone = () => { ph.treated = false; ph.det.reset(); ph.det.recorded = false; ph.ev.push({ t: ph.rec.length ? ph.rec[ph.rec.length - 1][0] : 0, event: 'zero' }); ph.lastState = ''; };
+function phoneMsg(t) { ph.msg = t; ph.msgT = performance.now(); phoneUI(); }
+function phoneUI() {
+  const on = phOn(), d = ph.det, hud = $('phonehud');
+  $('phonebtn').classList.toggle('on', on); $('livebtn').style.display = on ? '' : 'none'; if (!on && live.on) liveSet(false);
+  hud.classList.toggle('show', on); hud.classList.toggle('on', on);
+  const note = d.state === 'settle' && d.note ? 'ignoré : ' + d.note : '';
+  // pastille volontairement minimale : nom · direct · ok (« prêt » est dans la jauge) ; le détail (phase, gyro, dernier message) est dans l'infobulle
+  hud.lastChild.textContent = on ? [ph.name, live.on ? 'direct' : '', ph.treated ? 'ok' : ''].filter(Boolean).join(' · ') : '';      // « ok » : la version traitée du putt est disponible
+  hud.title = on ? ph.name + (live.on ? ' · direct' : '') + (d.hasGyro ? ' · gyro' : '') + ' · ' + (performance.now() - ph.msgT < 5000 && ph.msg ? ph.msg : note || PH_LAB[d.state] || '') : '';
+  stabUI();
+  $('pbstat').textContent = !ph.peer ? 'Initialisation…' : on ? 'Connecté : ' + ph.name + (d.hasGyro ? ' (gyro, L = ' + d.lever.toFixed(2) + ' m)' : ' (accélération seule)') + ' · ' + (PH_LAB[d.state] || '') : ph.code ? 'En attente du téléphone (code ' + ph.code.toUpperCase() + ')' : 'Connexion au serveur…';
+}
+let stabPrev = '';
+const STAB_HINT = { gyro: 'le putter bouge : immobilisez-le', acc: 'secousses détectées : ne touchez plus au putter', time: 'ne bougez plus…' };
+function stabUI() {                                                  // pastille-jauge (même format que les boutons du haut) : barre pendant la stabilisation ; « prêt » tant que le détecteur est prêt à capter le geste
+  const box = $('stabbox'), d = ph.det, on = phOn();
+  if (on && stabPrev === 'settle' && d.state === 'address' && ph.bell) playReady();                  // cloche à l'instant où c'est prêt
+  stabPrev = on ? d.state : '';
+  const settle = on && d.state === 'settle', ready = on && d.state === 'address';
+  box.hidden = !(settle || ready); if (box.hidden) return;
+  if (ready) { $('stabbar').firstChild.style.width = '100%'; $('stabtxt').textContent = 'prêt'; box.title = 'Prêt : backswing quand vous voulez'; box.className = 'ok'; return; }
+  $('stabtxt').textContent = '';
+  const pct = Math.round(d.settleProgress() * 100), lim = d.settleLimit(), s = d.sInfo, relax = s && s.relax > 1.05 ? ' · seuils assouplis ×' + s.relax.toFixed(1) : '';
+  // le putter bouge ou est secoué (au-delà du seuil de calme) : la jauge devient ROUGE et mesure l'agitation (seuil = 1/3 de la barre, ×3 = pleine) ; calme : elle est verte et se remplit
+  const agit = s ? Math.max(s.accR, s.gyR) : 0, bad = agit > 1;
+  $('stabbar').firstChild.style.width = (bad ? Math.min(100, Math.round(agit / 3 * 100)) : pct) + '%';
+  box.title = 'Stabilisation ' + pct + ' % · ' + (d.note ? 'Mouvement ignoré (' + d.note + ') · ' : '') + (STAB_HINT[lim] || '') + relax;     // détail au survol, pour rester discret
+  box.className = bad ? 'bad' : '';
+}
+setInterval(() => { if (ph.peer) phoneUI(); }, 100);
+
+function startPeer(retry) {
+  const ALPHA = 'abcdefghjkmnpqrstuvwxyz23456789';
+  ph.code = Array.from({ length: 4 }, () => ALPHA[Math.random() * ALPHA.length | 0]).join('');
+  const p = new Peer('putt-' + ph.code); ph.peer = p;
+  p.on('open', () => {
+    const url = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '') + 'phone.html?id=' + ph.code;
+    $('pbcode').textContent = ph.code.toUpperCase(); $('pbqr').innerHTML = '';
+    try { new QRCode($('pbqr'), { text: url, width: 190, height: 190 }); } catch (e) {}
+    $('pburl').textContent = location.protocol === 'file:' ? 'Cette page est ouverte depuis un fichier : publiez-la en https:// (le capteur du téléphone l\'exige) et ouvrez phone.html depuis le même site.' : url;
+    phoneUI();
+  });
+  p.on('error', e => { if (e.type === 'unavailable-id' && (retry || 0) < 5) { p.destroy(); ph.peer = null; startPeer((retry || 0) + 1); } else phoneMsg('erreur PeerJS : ' + e.type); });
+  p.on('connection', c => {
+    let ok = false;
+    c.on('data', d => {
+      if (!d) return;
+      if (d.type === 'hello') {                                      // un seul téléphone pour l'instant
+        const pid = d.pid || c.peer;
+        if (phOn() && ph.conn !== c && ph.pid !== pid) { try { c.send({ type: 'busy' }); } catch (e) {} setTimeout(() => c.close(), 400); return; }
+        if (ph.conn && ph.conn !== c && ph.conn.open) ph.conn.close();
+        ph.conn = c; ph.pid = pid; ph.name = (d.name || '').trim() || 'Téléphone'; ok = true; zeroPhone(); phoneUI();
+        if (ph.live && !live.on) liveSet(true);                       // temps réel activé par défaut dès la connexion (sauf si le joueur l'a désactivé)
+        $('phonebox').hidden = true; return;
+      }
+      if (!ok || ph.conn !== c) return;
+      if (d.type === 'zero') { zeroPhone(); phoneAddress(); phoneUI(); return; }
+      if (d.type !== 'a') return;
+      for (const a of d.s) { ph.det.push(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); ph.rec.push(a); }
+      if (ph.rec.length > 6000) ph.rec.splice(0, ph.rec.length - 5000);             // ~25 s à 200 Hz, pour pouvoir rejouer un essai
+      if (ph.det.state !== ph.lastState) { ph.lastState = ph.det.state; ph.ev.push({ t: ph.rec.length ? ph.rec[ph.rec.length - 1][0] : 0, state: ph.det.state, note: ph.det.note || '' }); if (ph.ev.length > 200) ph.ev.shift(); }
+      if (ph.det.state === 'done' && !ph.det.recorded) { ph.det.recorded = true; ph.lastMetrics = ph.det.metrics; ph.lastGyro = ph.det.hasGyro; try { if (ph.det.leverFit) localStorage.setItem('puttLever', ph.det.lever.toFixed(3)); } catch (e) {} if (live.on && live.run) liveDone(); else phoneStroke(); }
+      else if (live.on) liveTick();
+    });
+    c.on('close', () => { if (ph.conn === c) { ph.conn = null; phoneUI(); } });
+  });
+}
+setInterval(() => { if (phOn()) ph.conn.send({ type: 'ping', t: performance.now() }); }, 1000);
+
+// profil de vitesse du téléphone → trajectoire du putter (1 kHz, droite dans l'axe de visée, x = 0 à l'adresse = position d'impact)
+function trajFromPhone(det) {
+  trajFromPhone.ratio = 0;
+  const T = det.T, V = det.V, i0 = det.i0, iE = det.iEnd, t0 = T[i0], span = T[iE] - t0 || 1, vEnd = V[iE];
+  const PRE = 120, POST = 150, nr = Math.floor(span * 1000) + 1, n = PRE + nr + POST, v = new Float32Array(n);
+  const vc = a => V[a] - vEnd * (T[a] - t0) / span;                  // vitesse sans dérive (nulle à l'arrêt final)
+  for (let k = 0, j = i0; k < nr; k++) {
+    const t = t0 + k / 1000; while (j < iE && T[j + 1] <= t) j++;
+    const j1 = Math.min(iE, j + 1), d = T[j1] - T[j], u = d > 0 ? Math.min(1, Math.max(0, (t - T[j]) / d)) : 0;
+    v[PRE + k] = vc(j) + (vc(j1) - vc(j)) * u;
+  }
+  // l'impact a lieu à l'endroit de l'adresse : recul et avance (jusqu'à l'impact) doivent avoir la même longueur → on répartit l'écart sur les deux
+  const kTop = PRE + Math.round((det.tTop - t0) * 1000), kImp = Math.min(n - 1, PRE + Math.round((det.tImp - t0) * 1000));
+  let Lb = 0, Lf = 0; for (let k = PRE; k < kTop; k++) Lb -= v[k] * 0.001; for (let k = kTop; k <= kImp; k++) Lf += v[k] * 0.001;
+  if (Lb < 0.04 || Lf < 0.02) { finishTraj.why = 'amplitude du geste trop faible'; return null; }
+  const ratio = Lb / Lf; trajFromPhone.ratio = ratio; if (ratio < 0.5 || ratio > 2) { finishTraj.why = ratio > 1 ? 'l\'avance (' + (Lf * 100).toFixed(0) + ' cm) est trop courte pour le recul (' + (Lb * 100).toFixed(0) + ' cm) : la tête n\'est pas revenue à la balle' : 'l\'avance (' + (Lf * 100).toFixed(0) + ' cm) est bien plus longue que le recul (' + (Lb * 100).toFixed(0) + ' cm)'; return null; }
+  const a = 1 / Math.sqrt(ratio), b = Math.sqrt(ratio);
+  for (let k = PRE; k < n; k++) v[k] *= k < kTop ? a : b;
+  const x = new Float32Array(n); for (let k = PRE; k < n; k++) x[k] = x[k - 1] + 0.5 * (v[k] + v[k - 1]) * 0.001;
+  const dh = directHead; directHead = true;
+  const tr = finishTraj(x, new Float32Array(n), v, new Float32Array(n), PRE + nr);
+  if (!tr) directHead = dh;
+  else if (ph.imperf && det.YW && tr.n === n) {                       // angle de la face (gyro) : rotation autour de la verticale depuis l'adresse
+    const psi = new Float32Array(n), y0 = det.YW[i0] || 0, jm = Math.min(det.iAz, iE + 200);
+    for (let k = 0, j = i0; k < n; k++) {
+      if (k < PRE) continue;
+      const t = t0 + (k - PRE) / 1000; while (j < jm && T[j + 1] <= t) j++;
+      const j1 = Math.min(jm, j + 1), dd = T[j1] - T[j], u = dd > 0 ? Math.min(1, Math.max(0, (t - T[j]) / dd)) : 0;
+      psi[k] = (det.YW[j] + (det.YW[j1] - det.YW[j]) * u) - y0;
+    }
+    tr.psi = psi;
+  }
+  return tr;
+}
+function faceTxt() {                                                // angle de la face mesuré par le gyro (affiché ; appliqué à la simulation si l'option est cochée)
+  const m = ph.lastMetrics; if (!m || !ph.lastGyro) return '';
+  return ' · face ' + (m.face > 0 ? '+' : '') + m.face.toFixed(1) + '°' + (ph.imperf ? '' : ' (non appliquée)');
+}
+function phoneStroke() {
+  const tr = trajFromPhone(ph.det), why = finishTraj.why;
+  // putt valide : le détecteur reste figé en « Fin de swing » jusqu'à la remise à zéro du joueur ; putt inexploitable : ré-armé pour un nouvel essai
+  if (!tr) { zeroPhone(); phoneMsg('putt non exploitable' + (why ? ' : ' + why : '')); pad.hint = 'Putt du téléphone non exploitable' + (why ? ' : ' + why : '') + '.'; return; }
+  pad.raw = null; pad.traj = tr; S.traj = tr; pad.edit = makeEdit(tr); editSel = null; editHover = null; pad.hint = ''; pad.pl = plausibility(tr); pad.bub = { x: 0, y: 0, vx: 0, vy: 0 };
+  ph.treated = true; phoneMsg('putt rejoué' + faceTxt()); playDrawn();
+}
+/* ───────────── temps réel : le club suit le téléphone en direct ─────────────
+   La vitesse intégrée par le détecteur (1 kHz) construit une trajectoire qui s'allonge au fil des échantillons ; la physique la suit avec ~1 image de retard.
+   Le contact avec la balle est celui de la simulation. Comme la longueur de l'avance n'est connue qu'à la fin, la vitesse avant est légèrement majorée (facteur kF, ajusté
+   à chaque putt) pour que la face atteigne la balle ; si malgré tout la balle est manquée, le putt est rejoué avec la trajectoire corrigée. */
+const LIVE_MAX = 30000;
+const live = { on: false, run: false, tr: null, t0: 0, j: 0, y0: null, kF: 1.05 };
+function newLiveTr() {
+  const tr = { psi: ph.imperf ? new Float32Array(LIVE_MAX) : null, n: 1, cn: 1, nReal: 1, xs: new Float32Array(LIVE_MAX), zs: new Float32Array(LIVE_MAX), vx: new Float32Array(LIVE_MAX), vz: new Float32Array(LIVE_MAX), phi: new Float32Array(LIVE_MAX), tTop: 0.6, tEnd: 0, kImp: 0, live: true };
+  tr.cx = tr.xs; tr.cz = tr.zs; tr.cvx = tr.vx; tr.cvz = tr.vz; return tr;
+}
+function liveToBatch() {                                            // rejeu / édition : on repasse par la trajectoire traitée du dernier putt direct
+  live.run = false;
+  if (S.traj && S.traj.live && S.traj.batch) { S.traj = pad.traj = S.traj.batch; pad.edit = makeEdit(S.traj); editSel = null; editHover = null; }
+}
+function liveIdle() {                                               // club à l'adresse, en attente du prochain geste
+  live.run = false; live.tr = newLiveTr(); directHead = true; S.traj = pad.traj = live.tr; pad.raw = null; pad.edit = null; pad.pl = null; editSel = null; editHover = null; S.imp = null;
+  reset(); S.paused = true;
+}
+function liveBegin() {
+  const d = ph.det; live.tr = newLiveTr(); live.y0 = null; ph.treated = false;
+  // origine = juste avant le départ estimé (le détecteur intègre plus loin en amont, au calme : inutile pour l'affichage et fausserait les durées du rapport)
+  live.t0 = Math.max(d.T[d.i0], d.t0 - 0.15); live.j = d.i0; while (live.j < d.T.length - 1 && d.T[live.j + 1] <= live.t0) live.j++;
+  directHead = true; S.traj = pad.traj = live.tr; pad.raw = null; pad.edit = null; pad.pl = null; pad.hint = ''; editSel = null; editHover = null; S.imp = null;
+  reset(); S.paused = false; S.scale = 1; live.run = true;
+}
+function phoneAddress() {                                           // « Remise à zéro » : balle et club repositionnés à l'adresse, en attente du prochain geste
+  if (live.on) { liveIdle(); return; }                              // direct : club à l'adresse, figé jusqu'au départ du geste
+  liveToBatch(); S.imp = null; reset(); S.paused = true;           // sinon : même chose avec le dernier putt (rejoué au prochain geste)
+}
+/* fin de putt → balle et club reviennent seuls à l'adresse (comme « Remise à zéro »), 1,5 s après l'arrêt de la balle ; le détecteur est déjà ré-armé.
+   Rien n'est fait si un nouveau geste est en cours, en mode « Rejouer en boucle », ou si la scène est en pause. */
+function phoneAutoAddress() {
+  if (!ph.auto || !phOn() || live.run || params.loop || userPaused || S.paused || !S.stopped || S.stopT < 1.5) return;
+  const st = ph.det.state; if (st === 'back' || st === 'fwd' || st === 'follow') return;
+  phoneAddress(); zeroPhone(); phoneMsg('prêt pour le putt suivant');      // option activée : cycle entièrement automatique (scène + détecteur)
+}
+function liveCancel() { phoneMsg('geste ignoré'); liveIdle(); }
+function liveTick() {
+  const s = ph.det.state;
+  if (!live.run && (s === 'back' || s === 'fwd' || s === 'follow')) liveBegin();
+  else if (live.run && (s === 'settle' || s === 'address')) liveCancel();
+}
+function liveIngest() {                                             // vitesse du détecteur → échantillons à 1 kHz (x intégré)
+  const d = ph.det, tr = live.tr; if (!tr || (!d.locked && d.state === 'back')) return;                // axe pas encore fixé : le club attend
+  const T = d.T, V = d.V, last = T.length - 1; if (last <= d.i0) return;
+  const tEdge = T[last]; let k = tr.n;
+  while (k < LIVE_MAX && live.t0 + k / 1000 <= tEdge) {
+    const t = live.t0 + k / 1000;
+    while (live.j < last && T[live.j + 1] <= t) live.j++;
+    const j1 = Math.min(last, live.j + 1), dd = T[j1] - T[live.j], u = dd > 0 ? Math.min(1, Math.max(0, (t - T[live.j]) / dd)) : 0;
+    let v = V[live.j] + (V[j1] - V[live.j]) * u; if (d.tTop != null && t >= d.tTop) v *= live.kF;
+    if (tr.psi && d.YW) { if (live.y0 === null) live.y0 = d.YW[live.j] || 0; const ja = Math.min(live.j, d.iAz), jb = Math.min(j1, d.iAz); tr.psi[k] = (d.YW[ja] + (d.YW[jb] - d.YW[ja]) * u) - live.y0; }
+    tr.vx[k] = v; tr.xs[k] = tr.xs[k - 1] + 0.5 * (v + tr.vx[k - 1]) * 0.001; k++;
+  }
+  tr.n = tr.cn = tr.nReal = k; tr.tEnd = (k - 1) / 1000;
+  if (d.tTop != null) { tr.tTop = d.tTop - live.t0; S.T0 = tr.tTop; }
+}
+function liveStep(dt) {                                             // fait avancer la simulation jusqu'au dernier échantillon reçu (2 échantillons de marge : la vitesse est interpolée)
+  liveIngest();
+  const lag = (live.tr.n - 3) / 1000 - S.t, sim = lag > 0.12 ? lag - 0.06 : Math.min(lag, dt * 1.3);
+  if (sim > 0) { const n = Math.min(300, Math.ceil(sim / H_STEP)); for (let i = 0; i < n; i++) stepPhysics(sim / n); }
+}
+function liveDone() {
+  liveIngest();
+  const tr = trajFromPhone(ph.det), ratio = trajFromPhone.ratio, why = finishTraj.why;
+  live.run = false;                                                 // le détecteur reste figé en « Fin de swing » jusqu'à la remise à zéro du joueur
+  if (!tr) { zeroPhone(); phoneMsg('direct : putt non exploitable' + (why ? ' : ' + why : '')); return; }
+  if (ratio) live.kF = Math.max(0.85, Math.min(1.4, 0.6 * live.kF + 0.4 * ratio * 1.05));   // apprend l'échelle du capteur
+  live.tr.batch = tr; pad.pl = plausibility(tr); ph.treated = true;
+  if (!S.hit) { pad.traj = S.traj = tr; pad.edit = makeEdit(tr); editSel = null; editHover = null; pad.hint = ''; phoneMsg('balle manquée en direct : rejeu'); playDrawn(); }
+  else phoneMsg('putt direct' + faceTxt() + ' · Replay = version traitée');
+}
+function liveSet(on) {
+  live.on = on; $('livebtn').classList.toggle('on', on);
+  if (on) liveIdle();
+  else { live.run = false; if (S.traj && S.traj.live) { S.traj = pad.traj = null; directHead = false; S.paused = false; reset(); } }
+  phoneUI();
+}
+$('livebtn').addEventListener('click', () => { liveSet(!live.on); ph.live = live.on; try { localStorage.setItem('puttLive', ph.live ? '1' : '0'); } catch (e) {} });      // le choix du joueur est mémorisé
+
+async function phoneOpen() {
+  $('phonebox').hidden = false; phoneUI();
+  if (ph.peer) return;
+  $('pbstat').textContent = 'Chargement…';
+  try { await loadScript('https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'); await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'); }
+  catch (e) { $('pbstat').textContent = 'Bibliothèques indisponibles (connexion Internet requise).'; return; }
+  startPeer(0);
+}
+$('pbbell').checked = ph.bell;
+$('pbbell').addEventListener('change', () => { ph.bell = $('pbbell').checked; try { localStorage.setItem('puttBell', ph.bell ? '1' : '0'); } catch (e) {} if (ph.bell) playReady(); });      // écoute de contrôle à l'activation
+$('pbauto').checked = ph.auto;
+$('pbauto').addEventListener('change', () => { ph.auto = $('pbauto').checked; try { localStorage.setItem('puttAuto', ph.auto ? '1' : '0'); } catch (e) {} });
+$('pbimp').checked = ph.imperf;
+$('pbimp').addEventListener('change', () => { ph.imperf = $('pbimp').checked; try { localStorage.setItem('puttImperf', ph.imperf ? '1' : '0'); } catch (e) {} });
+$('phonebtn').addEventListener('click', phoneOpen);
+$('pbclose').addEventListener('click', () => { $('phonebox').hidden = true; });
+$('pbdisc').addEventListener('click', () => { if (ph.conn) { const c = ph.conn; ph.conn = null; c.close(); } zeroPhone(); phoneUI(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') $('phonebox').hidden = true; });
+$('pbrec').addEventListener('click', () => {                          // enregistre les échantillons bruts + les événements du détecteur (pour régler les seuils sur de vrais putts)
+  if (!ph.rec.length) { phoneMsg('rien à enregistrer'); return; }
+  const out = { app: 'precision-putting', when: new Date().toISOString(), phone: ph.name, options: ph.det.o, events: ph.ev, samples: ph.rec };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' }));
+  a.download = 'putt-phone-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  phoneMsg('essai enregistré (' + ph.rec.length + ' échantillons)');
+});
 function padPos(e) { const r = padc.getBoundingClientRect(), k = PAD_W / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k]; }
 function padFinish() {
   if (!pad.drawing) return; pad.drawing = false;
@@ -1119,7 +1405,7 @@ padc.addEventListener('pointerup', padFinish); padc.addEventListener('pointercan
     h.addEventListener('pointerup', () => { if (dg && !dg.moved) padEl.classList.toggle('min'); dg = null; });
   }
   $('padreplay').addEventListener('click', () => replayBtn(true));
-  $('padauto').addEventListener('click', () => { S.traj = null; pad.traj = null; pad.raw = null; pad.pl = null; pad.edit = null; editSel = null; S.imp = null; trials.length = 0; S.cur = null; reset(); pad.hint = 'Swing automatique rétabli.'; });
+  $('padauto').addEventListener('click', () => { directHead = false; S.traj = null; pad.traj = null; pad.raw = null; pad.pl = null; pad.edit = null; editSel = null; S.imp = null; trials.length = 0; S.cur = null; reset(); pad.hint = 'Swing automatique rétabli.'; });
 }
 const padStats = $('padstats');
 function fmtDeg(v, lr) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '° ' + (lr ? (v >= 0 ? 'D' : 'G') : ''); }
@@ -1584,7 +1870,8 @@ function frame(now) {
 
   // échelle de temps
   let target = 1;
-  if (!params.ramp) target = params.slow;
+  if (live.on && S.traj && S.traj.live) target = 1;                // direct : temps réel
+  else if (!params.ramp) target = params.slow;
   else if (S.traj ? S.t < S.traj.tEnd + 0.05 : (!S.hit || S.thd > 0)) target = params.slow;          // ralenti du début à la fin du swing (putter à l'arrêt)
   else {                                                         // swing terminé : retour progressif au temps réel
     if (S.tStop < 0) S.tStop = S.t;
@@ -1594,9 +1881,10 @@ function frame(now) {
   if (debugT === null) S.scale += (target - S.scale) * (1 - Math.exp(-dt * 5)); else S.scale = 0;
 
   let sim = (S.paused || userPaused) ? 0 : dt * S.scale;
-  if (sim > 0) { const n = Math.min(300, Math.ceil(sim / H_STEP)); for (let i = 0; i < n; i++) stepPhysics(sim / n); }
+  if (live.run) { S.scale = 1; liveStep(dt); }
+  else if (sim > 0) { const n = Math.min(300, Math.ceil(sim / H_STEP)); for (let i = 0; i < n; i++) stepPhysics(sim / n); }
 
-  if (S.stopped) { S.stopT += dt; if (params.loop && S.stopT > 1.8 && debugT === null) reset(); }
+  if (S.stopped) { S.stopT += dt; if (params.loop && S.stopT > 1.8 && debugT === null) reset(); else phoneAutoAddress(); }
 
   render(dt);
 }

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Putting – Capteur</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; background: #0b0f0c; color: #e8efe9; font: 16px/1.4 -apple-system, "Helvetica Neue", Arial, sans-serif;
+         display: flex; flex-direction: column; align-items: stretch; text-align: center; }
+  #main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .02em; }
+  input { width: 100%; max-width: 320px; padding: 14px; font-size: 20px; text-align: center; border-radius: 10px; border: 1px solid #2c3a30; background: #111a14; color: inherit; }
+  button { width: 100%; max-width: 320px; padding: 18px; font-size: 20px; font-weight: 600; border: 0; border-radius: 12px; background: #3fb36b; color: #04150a; }
+  /* RESET : première ligne de l'écran, sur toute la largeur, grande cible à toucher */
+  .reset { z-index: 5; width: 100%; max-width: none; margin: 0; border-radius: 0; border: 0; border-bottom: 1px solid rgba(0,0,0,.35);
+          min-height: clamp(88px, 18vh, 150px); padding: max(14px, env(safe-area-inset-top)) 16px 14px; font-size: clamp(30px, 9vw, 44px); font-weight: 800; letter-spacing: .16em;
+          background: #e0a93b; color: #1a1203; -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background .12s, transform .12s; }
+  .reset:active, .reset.hit { background: #f3c25a; transform: scale(.985); }
+  #zero { position: sticky; top: 0; }
+  #zero2 { position: fixed; left: 0; right: 0; bottom: 0; border-bottom: 0; border-top: 1px solid rgba(0,0,0,.35);
+           padding: 14px 16px max(14px, env(safe-area-inset-bottom)); }                     /* deuxième RESET : dans le tiers bas de l'écran, à portée du pouce */
+  #main { padding-bottom: calc(clamp(88px, 18vh, 150px) + 24px); }                         /* le contenu ne passe pas sous le RESET du bas */
+  #go[hidden] { display: none; }
+  button.alt { background: #16241a; color: #e8efe9; border: 1px solid #2c3a30; }
+  button.stop { background: #c9503c; color: #fff; }
+  button:disabled { opacity: .4; }
+  #st { font-size: 15px; opacity: .85; min-height: 1.4em; }
+  #big { font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #big small { font-size: 20px; font-weight: 400; opacity: .6; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #777; margin-right: 8px; }
+  .dot.on { background: #3fb36b; } .dot.err { background: #c9503c; }
+  #pk { font-size: 22px; color: #f0c04a; }
+  #info { font-size: 13px; opacity: .6; }
+</style>
+</head>
+<body>
+<button id="zero" class="reset" type="button">RESET</button>
+<div id="main">
+<h1>Capteur d'accélération</h1>
+<input id="name" placeholder="Nom (ex. Alice)" maxlength="20" autocomplete="off">
+<input id="code" placeholder="Code de la page" autocapitalize="off" autocomplete="off" inputmode="text">
+<button id="go">Démarrer</button>
+<div id="st"><span class="dot" id="dot"></span><span id="stTxt">Prêt</span></div>
+<div id="big">0.0 <small>m/s²</small></div>
+<div id="pk">Pic <b id="pkv">0.0</b> m/s²</div>
+<div id="info"></div>
+</div>
+<button id="zero2" class="reset" type="button">RESET</button>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const qs = new URLSearchParams(location.search);
+const DEMO = qs.has('demo');                       // données simulées (test sur ordinateur)
+const PREFIX = 'putt-';
+if (qs.get('id')) $('code').value = qs.get('id').replace(PREFIX, '');
+
+let peer = null, conn = null, running = false, sensor = null, wake = null, timer = null;
+let pid = ''; try { pid = localStorage.getItem('puttPid') || ''; if (!pid) { pid = Math.random().toString(36).slice(2, 10); localStorage.setItem('puttPid', pid); } $('name').value = localStorage.getItem('puttName') || ''; } catch (e) { pid = Math.random().toString(36).slice(2, 10); }
+let sensors = [], peak = 0, buf = [], sent = 0, got = 0, tStart = 0, srcName = '';
+
+function status(txt, cls) { $('stTxt').textContent = txt; $('dot').className = 'dot ' + (cls || ''); }
+
+/* ── envoi par lots (~20 ms) : un tableau [t(ms), ax, ay, az] par échantillon ── */
+function push(t, x, y, z, gx, gy, gz) {
+  const raw = gx !== undefined;                       // mode brut : accélération avec gravité + gyroscope (rad/s) ; sinon accélération linéaire
+  buf.push(raw ? [+t.toFixed(2), +x.toFixed(3), +y.toFixed(3), +z.toFixed(3), +gx.toFixed(4), +gy.toFixed(4), +gz.toFixed(4)] : [+t.toFixed(2), +x.toFixed(3), +y.toFixed(3), +z.toFixed(3)]);
+  got++;
+  const m = raw ? Math.abs(Math.hypot(x, y, z) - 9.81) : Math.hypot(x, y, z); $('big').firstChild.nodeValue = m.toFixed(1) + ' ';
+  if (m > peak) { peak = m; $('pkv').textContent = m.toFixed(1); }
+}
+function flush() {
+  if (!buf.length || !conn || !conn.open) { if (!conn || !conn.open) buf.length = 0; return; }
+  conn.send({ type: 'a', s: buf }); sent += buf.length; buf = [];
+}
+
+/* ── sources : accéléromètre + gyroscope (Generic Sensor, jusqu'à 200 Hz) ; à défaut accélération linéaire, puis DeviceMotion ; ?demo = données simulées ; ?lin force l'accélération linéaire ── */
+const tOf = s => { const pn = performance.now(), ts = s.timestamp; return (typeof ts === 'number' && Math.abs(ts - pn) < 2000 ? ts : pn) - tStart; };   // horodatage du capteur (plus régulier que l'arrivée de l'événement)
+async function startSensor() {
+  tStart = performance.now(); got = 0; sent = 0;
+  if (DEMO) { srcName = 'démo'; let k = 0; timer = setInterval(() => { const t = performance.now() - tStart, c = (t % 3000) / 1000;
+      const a = Math.exp(-Math.pow((c - 1.9) / 0.12, 2)) * 22 + Math.exp(-Math.pow((c - 1.1) / 0.3, 2)) * 4 + (Math.random() - .5) * .4;
+      push(t, a, 0.2 * a, 0); }, 5); return; }
+  if (!qs.has('lin') && 'Accelerometer' in window && 'Gyroscope' in window) {
+    try {
+      const gy = new Gyroscope({ frequency: 200 }), ac = new Accelerometer({ frequency: 200 }); let w = null;
+      gy.addEventListener('reading', () => { w = [gy.x, gy.y, gy.z]; });
+      ac.addEventListener('reading', () => { if (w) push(tOf(ac), ac.x, ac.y, ac.z, w[0], w[1], w[2]); });
+      for (const s of [gy, ac]) s.addEventListener('error', e => { status('Capteur : ' + e.error.name, 'err'); });
+      gy.start(); ac.start(); sensors = [gy, ac]; srcName = 'Accéléromètre + gyroscope'; return;
+    } catch (e) { sensors = []; /* repli */ }
+  }
+  if ('LinearAccelerationSensor' in window) {
+    try {
+      const s = new LinearAccelerationSensor({ frequency: 200 });
+      s.addEventListener('reading', () => push(performance.now() - tStart, s.x, s.y, s.z));
+      s.addEventListener('error', e => { status('Capteur : ' + e.error.name, 'err'); });
+      s.start(); sensors = [s]; srcName = 'LinearAccelerationSensor'; return;
+    } catch (e) { /* repli */ }
+  }
+  if ('DeviceMotionEvent' in window) {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') await DeviceMotionEvent.requestPermission();
+    window.addEventListener('devicemotion', onMotion); srcName = 'DeviceMotion'; return;
+  }
+  throw new Error('Aucun capteur d\'accélération disponible');
+}
+function onMotion(e) {
+  const a = e.acceleration || {}, t = performance.now() - tStart;
+  if (a.x == null) return;
+  push(t, a.x, a.y, a.z);
+}
+function stopSensor() {
+  for (const s of sensors) { try { s.stop(); } catch (e) {} } sensors = [];
+  window.removeEventListener('devicemotion', onMotion);
+  clearInterval(timer); timer = null;
+}
+
+async function keepAwake() { try { wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (running && document.visibilityState === 'visible') keepAwake(); });
+
+/* ── connexion PeerJS (le broker ne sert qu'à la poignée de main ; les données passent en direct) ── */
+function connect(id) {
+  if (peer) peer.destroy();
+  peer = new Peer();
+  peer.on('open', () => {
+    status('Connexion à la page…');
+    conn = peer.connect(PREFIX + id, { reliable: false, serialization: 'json' });
+    conn.on('open', async () => {
+      try { await startSensor(); } catch (e) { status(e.message, 'err'); return; }
+      conn.send({ type: 'hello', src: srcName, pid, name: $('name').value.trim(), t0: performance.now() });
+      status('Connecté · ' + srcName, 'on');
+      flushTimer = setInterval(flush, 20);
+      keepAwake();
+    });
+    conn.on('data', d => { if (!d) return; if (d.type === 'ping') conn.send({ type: 'pong', t: d.t }); else if (d.type === 'busy') { halt(); status('Occupé : un autre téléphone est déjà connecté', 'err'); } });
+    conn.on('close', () => { status('Connexion perdue', 'err'); halt(false); });
+    conn.on('error', e => status('Erreur : ' + e.type, 'err'));
+  });
+  peer.on('error', e => { status(e.type === 'peer-unavailable' ? 'Code introuvable : ouvrez d\'abord la page principale' : 'Erreur : ' + e.type, 'err'); halt(false); });
+}
+let flushTimer = null;
+
+function halt(closePeer = true) {
+  running = false; stopSensor(); clearInterval(flushTimer); buf = [];
+  if (wake) { wake.release().catch(() => {}); wake = null; }
+  if (closePeer && peer) { peer.destroy(); peer = null; }
+  $('go').textContent = 'Démarrer'; $('go').classList.remove('stop'); $('go').hidden = false;      // arrêt (erreur, connexion perdue, page occupée…) : le bouton revient pour réessayer
+}
+
+/* RESET (haut et bas de l'écran) : remise à zéro de la page (balle et club à l'adresse, nouvelle stabilisation) et du pic affiché ici */
+const doReset = btn => {
+  peak = 0; $('pkv').textContent = '0.0';
+  if (conn && conn.open) conn.send({ type: 'zero' });
+  if (navigator.vibrate) navigator.vibrate(30);
+  btn.classList.add('hit'); setTimeout(() => btn.classList.remove('hit'), 220);
+};
+for (const b of [$('zero'), $('zero2')]) b.addEventListener('click', () => doReset(b));
+
+$('go').addEventListener('click', () => {
+  if (running) { halt(); status('Arrêté'); return; }
+  const id = $('code').value.trim().toLowerCase();
+  if (!id) { status('Saisissez le code affiché sur la page principale', 'err'); return; }
+  try { localStorage.setItem('puttName', $('name').value.trim()); } catch (e) {}
+  running = true; $('go').hidden = true;                             // « Démarrer » disparaît dès l'appui ; il ne revient que si la connexion s'arrête
+  status('Connexion au serveur…');
+  connect(id);
+});
+
+setInterval(() => { if (running && tStart) { const dt = (performance.now() - tStart) / 1000; $('info').textContent = dt > 1 ? `${(got / dt).toFixed(0)} Hz · ${sent} échantillons envoyés` : ''; } }, 1000);
+})();
+</script>
+</body>
+</html>

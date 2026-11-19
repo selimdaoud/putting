@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Putting – Phases du coup</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #0b0f0c; color: #e8efe9; font: 16px/1.3 -apple-system, "Helvetica Neue", Arial, sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-bottom: 1px solid #1c2a20; font-size: 14px; flex-wrap: wrap; }
+  header b { font-size: 16px; letter-spacing: .02em; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #777; flex: none; }
+  .dot.on { background: #3fb36b; } .dot.wait { background: #e0a93b; }
+  #stat { opacity: .75; flex: 1; min-width: 120px; }
+  #smLab { display: flex; align-items: center; gap: 8px; font-size: 13px; opacity: .85; white-space: nowrap; }
+  #smv { display: inline-block; min-width: 44px; font-variant-numeric: tabular-nums; }
+  button { background: #16241a; color: inherit; border: 1px solid #2c3a30; border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer; }
+  button.sel { border-color: currentColor; background: #1d3024; }
+  #tabs { display: flex; gap: 8px; padding: 8px 18px 0; flex-wrap: wrap; }
+  #tabs:empty { display: none; }
+  .tab { display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+  .tab i { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+  .tab.off { opacity: .55; } .tab small { opacity: .7; }
+  main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #live { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #cmpWrap { flex: 1; min-height: 0; padding: 8px 18px 14px; display: none; }
+  #hero { display: flex; align-items: baseline; justify-content: center; gap: 5vw; padding: 1.5vh 18px 0; flex-wrap: wrap; }
+  #phase { font-size: min(15vh, 11vw); font-weight: 700; line-height: 1.05; transition: color .15s; }
+  #stab { height: 4px; border-radius: 2px; background: #1c2a20; overflow: hidden; margin: 6px auto 2px; width: 120px; display: none; }
+  #stab i { display: block; height: 100%; width: 0; border-radius: 2px; background: #3fb36b; transition: width .12s linear, background .25s; }
+  #stab.bad i { background: #e5533d; }
+  #sub { font-size: 14px; opacity: .65; min-height: 1.3em; text-align: center; }
+  .big { text-align: left; } .big span { display: block; font-size: 12px; opacity: .6; letter-spacing: .08em; text-transform: uppercase; }
+  .big div { font-size: min(8vh, 8vw); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.05; }
+  .big small { font-size: .35em; font-weight: 400; opacity: .55; margin-left: .3em; }
+  #tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 8px 18px 0; }
+  .tile { background: #101a13; border: 1px solid #1c2a20; border-radius: 10px; padding: 6px 10px; }
+  .tile span { display: block; font-size: 11px; opacity: .6; letter-spacing: .06em; text-transform: uppercase; }
+  .tile b { font-size: min(4.2vh, 5vw); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .tile small { opacity: .55; font-size: .6em; font-weight: 400; margin-left: .25em; }
+  @media (max-width: 760px) { #tiles { grid-template-columns: repeat(3, 1fr); } }
+  #chartWrap { flex: 1; min-height: 0; padding: 8px 18px 14px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  #pair { position: fixed; inset: 0; background: rgba(5,8,6,.96); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 20px; }
+  #pair.hide { display: none; }
+  #qr { background: #fff; padding: 14px; border-radius: 12px; }
+  #code { font-size: 44px; font-weight: 700; letter-spacing: .12em; }
+  #url { font-size: 13px; opacity: .6; word-break: break-all; max-width: 560px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span><b>Phases du putt</b><span id="stat">Initialisation…</span>
+  <label id="smLab">Lissage <input type="range" id="sm" min="0" max="100" step="5" value="25"> <span id="smv">25 ms</span></label>
+  <button id="allBtn" style="display:none">Tous les téléphones</button>
+  <button id="viewBtn">Comparer les putts</button>
+  <button id="clrBtn" style="display:none">Effacer</button>
+  <button id="zero">Remise à zéro</button>
+  <button id="zeroAll" style="display:none">Tous à zéro</button>
+  <button id="pairBtn">Ajouter un téléphone</button>
+</header>
+<div id="tabs"></div>
+<main>
+  <div id="live">
+  <div id="hero">
+    <div id="phase">—</div>
+    <div class="big"><span>Accélération</span><div id="now">0.0<small>m/s²</small></div></div>
+    <div class="big"><span>Pic avant</span><div id="peak" style="color:#3fb36b">0.0<small>m/s²</small></div></div>
+  </div>
+  <div id="stab"><i></i></div>
+  <div id="sub"></div>
+  <div id="tiles">
+    <div class="tile"><span>Backswing</span><b id="mBack">—</b></div>
+    <div class="tile"><span>Forward swing</span><b id="mFwd">—</b></div>
+    <div class="tile"><span>Tempo</span><b id="mTempo">—</b></div>
+    <div class="tile"><span>Accél. avant max</span><b id="mAcc">—</b></div>
+    <div class="tile"><span>Vitesse impact</span><b id="mVel">—</b></div>
+    <div class="tile"><span>Amplitude recul</span><b id="mLen">—</b></div>
+  </div>
+  <div id="chartWrap"><canvas id="cv"></canvas></div>
+  </div>
+  <div id="cmpWrap"><canvas id="cv2"></canvas></div>
+</main>
+<div id="pair">
+  <h2 style="margin:0">Connecter un téléphone</h2>
+  <div id="qr"></div>
+  <div>ou ouvrez <b>phone.html</b> sur le téléphone et saisissez</div>
+  <div id="code">…</div>
+  <div id="url"></div>
+  <div style="opacity:.6;font-size:13px">Plusieurs téléphones peuvent utiliser le même code.</div>
+  <button id="close">Fermer</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="stroke.js"></script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const PREFIX = 'putt-';
+const ALPHA = 'abcdefghjkmnpqrstuvwxyz23456789';
+const code = Array.from({ length: 4 }, () => ALPHA[Math.random() * ALPHA.length | 0]).join('');
+const COL = { back: '#5b9bd5', fwd: '#3fb36b', imp: '#f0c04a', follow: '#b08ad8', address: '#8a968d' };
+const PCOL = ['#f08c42', '#42b0f0', '#e0507a', '#8fd14f', '#d6c13a', '#9b7be0'];   // une couleur par téléphone
+
+let tau = 25, view = 'live', cmpAll = false, cur = null;
+const sessions = new Map();                       // pid → session (un détecteur, un historique, une connexion par téléphone)
+
+const phoneUrl = location.href.replace(/index-rt\.html.*$/, '') + 'phone.html?id=' + code;
+$('code').textContent = code.toUpperCase(); $('url').textContent = phoneUrl;
+try { new QRCode($('qr'), { text: phoneUrl, width: 220, height: 220 }); } catch (e) { $('qr').textContent = 'QR indisponible'; }
+$('close').onclick = () => $('pair').classList.add('hide');
+$('pairBtn').onclick = () => $('pair').classList.remove('hide');
+try { const v = localStorage.getItem('rtSmooth2'); if (v !== null) { tau = +v; $('sm').value = tau; $('smv').textContent = tau + ' ms'; } } catch (e) {}
+$('sm').oninput = () => { tau = +$('sm').value; $('smv').textContent = tau + ' ms'; try { localStorage.setItem('rtSmooth2', tau); } catch (e) {} };
+
+/* ── sessions : un téléphone = un détecteur + son historique ── */
+function newSession(pid, name) {
+  let nm = name || 'Téléphone ' + (sessions.size + 1), k = 2; const taken = n => [...sessions.values()].some(s => s.name === n);
+  const base = nm; while (taken(nm)) nm = base + ' ' + k++;
+  const s = { pid, name: nm, color: PCOL[sessions.size % PCOL.length], det: new StrokeDetector(), hist: [], strokeNo: 0, conn: null, online: false,
+    src: '', lastRx: 0, nRx: 0, rate: 0, rtt: null, rateT0: performance.now(), impactWall: 0, prevState: '' };
+  sessions.set(pid, s); if (!cur) cur = s; return s;
+}
+const zeroS = s => { s.det.reset(); s.det.recorded = false; s.prevState = ''; s.impactWall = 0; };
+$('zero').onclick = () => { if (cur) zeroS(cur); };
+$('zeroAll').onclick = () => sessions.forEach(zeroS);
+
+function attach(c, d) {
+  const pid = d.pid || 'anon-' + c.peer;
+  let s = sessions.get(pid);
+  if (s) { const old = s.conn; s.conn = c; if (old && old !== c && old.open) old.close(); }   // même téléphone qui se reconnecte : on garde sa session
+  else s = newSession(pid, (d.name || '').trim());
+  s.conn = c; s.online = true; s.src = d.src || ''; s.lastRx = performance.now(); zeroS(s); renderTabs();
+  return s;
+}
+function setStatus(txt, cls) { $('stat').textContent = txt; $('dot').className = 'dot ' + (cls || ''); }
+const peer = new Peer(PREFIX + code);
+peer.on('open', () => setStatus('En attente d\'un téléphone (code ' + code.toUpperCase() + ')', 'wait'));
+peer.on('error', e => setStatus('Erreur PeerJS : ' + e.type, ''));
+peer.on('connection', c => {
+  let s = null;
+  c.on('open', () => $('pair').classList.add('hide'));
+  c.on('data', d => {
+    if (!d) return;
+    if (d.type === 'hello') { s = attach(c, d); return; }
+    if (!s || s.conn !== c) return;
+    if (d.type === 'zero') { zeroS(s); return; }
+    if (d.type === 'pong') { s.rtt = performance.now() - d.t; return; }
+    if (d.type !== 'a') return;
+    for (const a of d.s) { s.det.push(a[0], a[1], a[2], a[3], a[4], a[5], a[6]); s.nRx++; }
+    s.lastRx = performance.now();
+  });
+  c.on('close', () => { if (s && s.conn === c) { s.online = false; s.conn = null; renderTabs(); } });
+});
+setInterval(() => sessions.forEach(s => { if (s.conn && s.conn.open) s.conn.send({ type: 'ping', t: performance.now() }); }), 1000);
+setInterval(() => { const n = performance.now(); sessions.forEach(s => { s.rate = s.nRx / ((n - s.rateT0) / 1000); s.nRx = 0; s.rateT0 = n; }); }, 1000);
+
+/* ── onglets (un par téléphone) ── */
+function renderTabs() {
+  const box = $('tabs'); box.innerHTML = '';
+  sessions.forEach(s => {
+    const b = document.createElement('button'); b.className = 'tab' + (s === cur ? ' sel' : '') + (s.online ? '' : ' off'); b.style.color = s.color;
+    b.innerHTML = '<i></i><span style="color:#e8efe9"></span><small style="color:#e8efe9"></small>';
+    b.children[1].textContent = s.name; b.children[2].textContent = s.online ? '' : 'hors ligne';
+    b.onclick = () => { cur = s; renderTabs(); };
+    box.appendChild(b);
+  });
+  const multi = sessions.size > 1;
+  $('zeroAll').style.display = multi ? '' : 'none'; $('allBtn').style.display = multi && view === 'cmp' ? '' : 'none';
+}
+addEventListener('keydown', e => { const k = parseInt(e.key, 10); if (k >= 1 && k <= sessions.size) { cur = [...sessions.values()][k - 1]; renderTabs(); } });
+
+/* ── libellé de phase ── */
+function phaseLabel(S) {
+  const det = S.det, now = performance.now();
+  switch (det.state) {
+    case 'settle': { const lim = det.settleLimit(), s = det.sInfo, hint = { gyro: 'le putter bouge : immobilisez-le', acc: 'secousses détectées', time: 'ne bougez plus…' }[lim] || '';
+      return ['Stabilisation ' + Math.round(det.settleProgress() * 100) + ' %', COL.address, (det.note ? 'Mouvement ignoré (' + det.note + ') · ' : '') + hint + (s && s.relax > 1.05 ? ' · seuils assouplis ×' + s.relax.toFixed(1) : '')]; }
+    case 'address': return ['Adresse', '#e8efe9', 'Prêt : backswing puis forward swing'];
+    case 'back': return ['Backswing', COL.back, ''];
+    case 'fwd': return ['Forward swing', COL.fwd, ''];
+    case 'follow': return now - S.impactWall < 700 ? ['Impact', COL.imp, det.shock ? 'choc détecté' : 'instant estimé'] : ['Fin de swing', COL.follow, ''];
+    case 'done': return ['Fin de swing', COL.follow, 'Remise à zéro pour un nouveau putt'];
+  }
+  return ['—', '#e8efe9', ''];
+}
+function tiles(det) {
+  const m = det.metrics;
+  const set = (id, v, u) => { $(id).innerHTML = v == null ? '—' : v + '<small>' + u + '</small>'; };
+  if (m) {
+    set('mBack', m.back.toFixed(2), 's'); set('mFwd', m.fwd.toFixed(2), 's');
+    set('mTempo', m.tempo ? m.tempo.toFixed(1) + ' : 1' : null, ''); set('mAcc', m.aFwd.toFixed(1), 'm/s²');
+    set('mVel', m.vImpact.toFixed(2), 'm/s'); set('mLen', (m.lenBack * 100).toFixed(0), 'cm');
+  } else {
+    const t = det.tPrev, b = det.t0 != null ? (det.tTop != null ? det.tTop : t) - det.t0 : null;
+    const f = det.tTop != null ? (det.tImp != null ? det.tImp : t) - det.tTop : null;
+    set('mBack', b != null ? b.toFixed(2) : null, 's'); set('mFwd', f != null ? f.toFixed(2) : null, 's');
+    set('mTempo', null, ''); set('mAcc', null, ''); set('mVel', null, ''); set('mLen', null, '');
+  }
+}
+
+/* ── vue « comparaison » : vitesse et accélération, backswing et forward swing alignés sur le début de leur phase ── */
+const SC = ['#4a63d6', '#3fb36b', '#d9534f', '#b04fc0', '#37b4b8'];
+function snapshot(S) {
+  const det = S.det, T = det.T, V = det.V, i0 = det.i0, iT = det.iTop, iE = det.iEnd, span = T[iE] - T[i0] || 1, vEnd = V[iE];
+  const vc = j => V[j] - vEnd * (T[j] - T[i0]) / span;        // vitesse sans dérive
+  const seg = (a, b, sg) => { const t = [], v = [], ac = []; for (let j = a; j <= b; j++) { t.push((T[j] - T[a]) * 1000); v.push(sg * vc(j) * 1000); ac.push(sg * det.signed(j) * 1000); } return { t, v, a: ac }; };
+  S.hist.push({ id: ++S.strokeNo, back: seg(i0, iT, -1), fwd: seg(iT, iE, 1), imp: (det.tImp - det.tTop) * 1000 });
+  if (S.hist.length > 5) S.hist.shift();
+}
+function zsmooth(t, a) {                                       // lissage sans retard : EMA avant puis arrière
+  if (tau <= 0 || a.length < 3) return a;
+  const o = a.slice(), kk = j => 1 - Math.exp(-(t[j] - t[j - 1]) / tau);
+  for (let j = 1; j < o.length; j++) o[j] = o[j - 1] + (o[j] - o[j - 1]) * kk(j);
+  for (let j = o.length - 2; j >= 0; j--) o[j] = o[j + 1] + (o[j] - o[j + 1]) * kk(j + 1);
+  return o;
+}
+const nice = (x, list) => list.find(v => v >= x) || Math.ceil(x / list[list.length - 1]) * list[list.length - 1];
+const cv2 = $('cv2'), c2 = cv2.getContext('2d');
+function drawCmp() {
+  const dpr = window.devicePixelRatio || 1, w = cv2.clientWidth, h = cv2.clientHeight;
+  if (cv2.width !== w * dpr || cv2.height !== h * dpr) { cv2.width = w * dpr; cv2.height = h * dpr; }
+  c2.setTransform(dpr, 0, 0, dpr, 0, 0); c2.clearRect(0, 0, w, h);
+  const FG = '#cfd8d1', DIM = '#6f7e73';
+  const padL = 84, padR = 16, padT = 62, padB = 30, gx = 56, gy = 50, pw = (w - padL - padR - gx) / 2, ph = (h - padT - padB - gy) / 2;
+  if (pw < 60 || ph < 40) return;
+  c2.font = '12px -apple-system, Arial';
+  // courbes à tracer : les 5 derniers putts du téléphone, ou le dernier putt de chaque téléphone
+  let items;
+  if (cmpAll) items = [...sessions.values()].filter(s => s.hist.length).map(s => ({ s: s.hist[s.hist.length - 1], col: s.color, label: s.name, last: true }));
+  else { const hs = cur ? cur.hist : []; items = hs.map((st, i) => ({ s: st, col: SC[st.id % 5], label: 'n°' + st.id, last: i === hs.length - 1 })); }
+  if (!items.length) { c2.fillStyle = DIM; c2.textAlign = 'center'; c2.font = '16px -apple-system, Arial'; c2.fillText('Aucun putt enregistré : faites un putt complet, puis « Remise à zéro » pour le suivant.', w / 2, h / 2); return; }
+  const S = items.map(e => ({ e, ba: zsmooth(e.s.back.t, e.s.back.a), fa: zsmooth(e.s.fwd.t, e.s.fwd.a) }));
+  let vm = 0, am = 0, tb = 0, tf = 0;
+  for (const z of S) { for (const v of z.e.s.back.v.concat(z.e.s.fwd.v)) vm = Math.max(vm, v); for (const v of z.ba.concat(z.fa)) am = Math.max(am, Math.abs(v));
+    tb = Math.max(tb, z.e.s.back.t[z.e.s.back.t.length - 1]); tf = Math.max(tf, z.e.s.fwd.t[z.e.s.fwd.t.length - 1]); }
+  const VM = nice(vm, [500, 1000, 1500, 2000, 2500, 3000, 4000, 5000]), AM = nice(am, [2500, 5000, 7500, 10000, 15000, 20000, 30000]);
+  const TM = [nice(tb, [300, 450, 600, 900, 1200, 1500, 2000]), nice(tf, [300, 450, 600, 900, 1200, 1500, 1800, 2400])];
+  c2.textAlign = 'left'; c2.fillStyle = DIM; const t0 = cmpAll ? 'Dernier putt de chaque téléphone :' : (cur ? cur.name : '') + ' — derniers putts :'; c2.fillText(t0, padL, 16);
+  let lx = padL + c2.measureText(t0).width + 18;
+  for (const z of S) { c2.fillStyle = z.e.col; c2.fillRect(lx, 7, 18, 4); c2.fillStyle = FG; c2.fillText(z.e.label, lx + 24, 16); lx += c2.measureText(z.e.label).width + 48; }
+  c2.textAlign = 'center'; c2.fillStyle = FG; c2.font = '22px -apple-system, Arial';
+  c2.fillText('-backswing-', padL + pw / 2, 44); c2.fillText('-forward swing-', padL + pw + gx + pw / 2, 44); c2.font = '12px -apple-system, Arial';
+  for (let c = 0; c < 2; c++) for (let r = 0; r < 2; r++) {
+    const x0 = padL + c * (pw + gx), y0 = padT + r * (ph + gy), X = t => x0 + t / TM[c] * pw;
+    const Y = r ? (a => y0 + ph / 2 - a / AM * (ph / 2)) : (v => y0 + ph - v / VM * ph);
+    c2.strokeStyle = DIM; c2.lineWidth = 1; c2.fillStyle = DIM;
+    c2.beginPath(); c2.moveTo(x0, y0); c2.lineTo(x0, y0 + ph); c2.stroke();
+    c2.textAlign = 'right';
+    for (let k = r ? -2 : 0; k <= (r ? 2 : 4); k++) { const val = r ? k * AM / 2 : k * VM / 4, y = Y(val);
+      c2.beginPath(); c2.moveTo(x0 - 4, y); c2.lineTo(x0, y); c2.stroke(); c2.fillText(Math.round(val), x0 - 8, y + 4); }
+    c2.strokeStyle = r ? FG : DIM; c2.beginPath(); c2.moveTo(x0, Y(0)); c2.lineTo(x0 + pw, Y(0)); c2.stroke();
+    c2.textAlign = 'center'; c2.strokeStyle = DIM;
+    for (let k = 0; k <= 4; k++) { const t = k * TM[c] / 4, x = X(t); c2.beginPath(); c2.moveTo(x, y0 + ph); c2.lineTo(x, y0 + ph + 4); c2.stroke(); c2.fillText(Math.round(t), x, y0 + ph + 16); }
+    if (r === 0 && c === 0) c2.fillText('ms', x0 + pw + 14, y0 + ph + 16);
+    c2.save(); c2.translate(x0 - 62, y0 + ph / 2); c2.rotate(-Math.PI / 2); c2.fillStyle = FG; c2.font = '15px -apple-system, Arial';
+    c2.fillText(r ? 'Acceleration [mm/s²]' : 'Speed [mm/s]', 0, 0); c2.restore(); c2.font = '12px -apple-system, Arial';
+    c2.save(); c2.beginPath(); c2.rect(x0 - 1, y0 - 6, pw + 8, ph + 12); c2.clip();
+    for (const z of S) {
+      const sg = c ? z.e.s.fwd : z.e.s.back, Vs = r ? (c ? z.fa : z.ba) : sg.v;
+      c2.strokeStyle = z.e.col; c2.lineWidth = z.e.last ? 2.8 : 1.8; c2.lineJoin = 'round'; c2.beginPath();
+      for (let j = 0; j < sg.t.length; j++) j ? c2.lineTo(X(sg.t[j]), Y(Vs[j])) : c2.moveTo(X(sg.t[j]), Y(Vs[j]));
+      c2.stroke();
+      if (c === 1) {                                                                    // repère d'impact : double trait vertical
+        let j = 0; while (j < sg.t.length - 1 && sg.t[j] < z.e.s.imp) j++;
+        const x = X(z.e.s.imp), y = Y(Vs[j]); c2.lineWidth = 1.4; c2.beginPath(); c2.moveTo(x - 2, y - 16); c2.lineTo(x - 2, y + 16); c2.moveTo(x + 2, y - 16); c2.lineTo(x + 2, y + 16); c2.stroke();
+      }
+    }
+    c2.restore();
+  }
+}
+const setView = v => { view = v; $('live').style.display = v === 'cmp' ? 'none' : 'flex'; $('cmpWrap').style.display = v === 'cmp' ? 'block' : 'none';
+  $('viewBtn').textContent = v === 'cmp' ? 'Temps réel' : 'Comparer les putts'; $('clrBtn').style.display = v === 'cmp' ? '' : 'none'; renderTabs(); };
+$('viewBtn').onclick = () => setView(view === 'cmp' ? 'live' : 'cmp');
+$('clrBtn').onclick = () => { if (cmpAll) sessions.forEach(s => { s.hist.length = 0; }); else if (cur) cur.hist.length = 0; };
+$('allBtn').onclick = () => { cmpAll = !cmpAll; $('allBtn').classList.toggle('sel', cmpAll); };
+addEventListener('keydown', e => { if (e.key === 'v') $('viewBtn').onclick(); });
+
+/* ── tracé en direct : accélération signée sur l'axe du coup (recul < 0, avant > 0), bandes colorées par phase ── */
+const cv = $('cv'), cx = cv.getContext('2d');
+let yMax = 6, vx0 = 0, vx1 = 3, lastCur = null;
+function updateStatus() {
+  const n = [...sessions.values()].filter(s => s.online).length;
+  if (!cur) return;
+  const live = cur.online && performance.now() - cur.lastRx < 1500;
+  setStatus(`${cur.name}${cur.det.hasGyro ? ' (gyro)' : ''} · ${cur.online ? 'connecté' : 'hors ligne'}${cur.online ? ` · ${cur.rate.toFixed(0)} Hz${cur.rtt != null ? ' · ' + cur.rtt.toFixed(0) + ' ms' : ''}` : ''}${sessions.size > 1 ? ` — ${n}/${sessions.size} téléphones` : ''}`, cur.online ? (live ? 'on' : 'wait') : '');
+}
+function draw() {
+  requestAnimationFrame(draw);
+  sessions.forEach(s => {                                          // suivi de tous les téléphones, affichés ou non
+    if (s.det.state === 'follow' && s.prevState !== 'follow') s.impactWall = performance.now();
+    s.prevState = s.det.state;
+    if (s.det.state === 'done' && !s.det.recorded) { s.det.recorded = true; snapshot(s); }
+  });
+  if (view === 'cmp') { drawCmp(); updateStatus(); return; }
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, w, h);
+  if (!cur) { $('phase').textContent = 'En attente'; $('phase').style.color = COL.address; $('sub').textContent = 'Appairez un téléphone (code ' + code.toUpperCase() + ')'; tiles({ metrics: null, tPrev: 0, t0: null }); return; }
+  const S = cur, det = S.det;
+  if (lastCur !== S) { lastCur = S; vx0 = vx1 = 0; }
+  const [lab, col, sub] = phaseLabel(S);
+  { const st = det.state === 'settle'; $('stab').style.display = st ? 'block' : 'none'; if (st) { const si = det.sInfo, ag = si ? Math.max(si.accR, si.gyR) : 0, bad = ag > 1; $('stab').firstChild.style.width = (bad ? Math.min(100, Math.round(ag / 3 * 100)) : Math.round(det.settleProgress() * 100)) + '%'; $('stab').className = bad ? 'bad' : ''; } }
+  $('phase').textContent = lab; $('phase').style.color = col; $('sub').textContent = sub; tiles(det);
+  const n = det.T.length; if (!n) { updateStatus(); return; }
+  const tNow = det.T[n - 1], T = det.T;
+
+  let x0, x1; const framed = det.state === 'done' || det.t0 != null;
+  if (det.state === 'done') { x0 = det.t0 - 0.4; x1 = det.tEnd + 0.4; }
+  else if (det.t0 != null) { x0 = det.t0 - 0.6; x1 = Math.max(det.t0 + 2.4, tNow + 0.2); }
+  else { x0 = tNow - 3; x1 = tNow; }
+  const snap = vx1 === 0 ? 1 : (framed ? 0.25 : 1);
+  vx0 += (x0 - vx0) * snap; vx1 += (x1 - vx1) * snap;
+
+  let lo = 0; while (lo < n - 1 && T[lo] < vx0 - 0.3) lo++;
+  const raw = [], sm = []; let s = det.signed(lo);
+  for (let j = lo; j < n; j++) { const r = det.signed(j); s = j === lo || tau <= 0 ? r : s + (r - s) * (1 - Math.exp(-(T[j] - T[j - 1]) * 1000 / tau)); raw.push(r); sm.push(s); }
+  let m = 0; for (let j = 0; j < sm.length; j++) if (T[lo + j] >= vx0 && Math.abs(sm[j]) > m) m = Math.abs(sm[j]);
+  yMax += (Math.max(5, Math.ceil(m / 2.5) * 2.5) - yMax) * 0.15;
+
+  const L = 44, B = 24, Tp = 22, W = w - L - 8, H = h - B - Tp, mid = Tp + H / 2;
+  const X = t => L + (t - vx0) / (vx1 - vx0) * W, Y = a => mid - a / yMax * (H / 2);
+  cx.font = '12px -apple-system, Arial'; cx.textBaseline = 'alphabetic';
+
+  const band = (a, b, c, name) => { const xa = Math.max(L, X(a)), xb = Math.min(L + W, X(b)); if (xb <= xa) return;
+    cx.fillStyle = c + '22'; cx.fillRect(xa, Tp, xb - xa, H); cx.fillStyle = c; cx.fillRect(xa, Tp, xb - xa, 3);
+    if (name && xb - xa > 40) { cx.fillStyle = c; cx.textAlign = 'center'; cx.fillText(name, (xa + xb) / 2, Tp - 6); } };
+  if (det.t0 != null) {
+    band(T[0], det.t0, COL.address, 'Adresse');
+    band(det.t0, det.tTop != null ? det.tTop : tNow, COL.back, 'Backswing');
+    if (det.tTop != null) band(det.tTop, det.tImp != null ? det.tImp : tNow, COL.fwd, 'Forward swing');
+    if (det.tImp != null) band(det.tImp, det.tEnd != null ? det.tEnd : tNow, COL.follow, 'Fin de swing');
+    if (det.tEnd != null) band(det.tEnd, x1 + 1, COL.address, '');
+  } else band(vx0, tNow, COL.address, 'Adresse');
+
+  cx.textAlign = 'left';
+  const step = yMax > 20 ? 10 : yMax > 10 ? 5 : 2.5;
+  for (let g = -Math.floor(yMax / step) * step; g <= yMax; g += step) {
+    cx.strokeStyle = g === 0 ? '#3a4a3f' : '#1c2a20'; cx.lineWidth = g === 0 ? 1.5 : 1;
+    cx.beginPath(); cx.moveTo(L, Y(g)); cx.lineTo(w - 8, Y(g)); cx.stroke();
+    cx.fillStyle = '#6f7e73'; cx.fillText(g, 8, Y(g) + 4);
+  }
+  cx.fillStyle = '#6f7e73'; cx.fillText('m/s²', 8, 12);
+  cx.textAlign = 'right'; cx.fillStyle = '#4d5c51'; cx.fillText('↑ vers la balle', w - 10, Y(0) - 8); cx.fillText('↓ recul', w - 10, Y(0) + 18);
+  if (det.t0 != null) {
+    cx.textAlign = 'center'; cx.fillStyle = '#6f7e73';
+    for (let ts = Math.ceil((vx0 - det.t0) * 2) / 2; det.t0 + ts <= vx1; ts += 0.5) if (X(det.t0 + ts) > L + 10) cx.fillText(ts.toFixed(1) + ' s', X(det.t0 + ts), h - 6);
+  }
+
+  const line = (V, c, lw) => { cx.beginPath(); let st = false;
+    for (let j = 0; j < V.length; j++) { const x = X(T[lo + j]); if (x < L) continue; st ? cx.lineTo(x, Y(V[j])) : (cx.moveTo(x, Y(V[j])), st = true); }
+    cx.strokeStyle = c; cx.lineWidth = lw; cx.lineJoin = 'round'; cx.stroke(); };
+  cx.save(); cx.beginPath(); cx.rect(L, 0, W + 8, h); cx.clip();
+  if (tau > 0) line(raw, 'rgba(232,239,233,.18)', 1);
+  line(sm, '#e8efe9', 2.5);
+  if (det.tImp != null) {
+    const xi = X(det.tImp); cx.strokeStyle = COL.imp; cx.lineWidth = 2; cx.setLineDash([5, 4]); cx.beginPath(); cx.moveTo(xi, Tp); cx.lineTo(xi, Tp + H); cx.stroke(); cx.setLineDash([]);
+    const j = Math.min(sm.length - 1, Math.max(0, det.iImp - lo)); cx.fillStyle = COL.imp; cx.beginPath(); cx.arc(xi, Y(sm[j]), 6, 0, 7); cx.fill();
+    cx.textAlign = 'left'; cx.font = '600 13px -apple-system, Arial'; cx.fillText('Impact', xi + 8, Tp + 18);
+  }
+  cx.restore();
+
+  $('now').firstChild.nodeValue = (Math.round(sm[sm.length - 1] * 10) / 10 || 0).toFixed(1);
+  let pk = 0; if (det.iTop >= 0) for (let j = Math.max(lo, det.iTop); j < n; j++) { const v = sm[j - lo]; if (v > pk) pk = v; }
+  $('peak').firstChild.nodeValue = pk.toFixed(1);
+  updateStatus();
+}
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
